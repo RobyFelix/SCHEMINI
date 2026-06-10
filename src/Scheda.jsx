@@ -50,7 +50,7 @@ function Block({ b }) {
     case 'esempio':
       return (
         <div className="callout green">
-          <div className="tag">{b.titolo || 'Esempio svolto'}</div>
+          <div className="tag"><Inline text={b.titolo || 'Esempio svolto'} /></div>
           <ol className="passi">{(b.passi || []).map((p, i) => <li key={i}><Inline text={p} /></li>)}</ol>
           {b.verifica && <div className="verifica"><strong>Verifica:</strong> <Inline text={b.verifica} /></div>}
         </div>

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import Scheda from './Scheda.jsx'
 
 const PIN_KEY = 'schemini_pin'
-
 function getPin() { try { return sessionStorage.getItem(PIN_KEY) || '' } catch { return '' } }
 
 async function api(path, { method = 'GET', body } = {}) {
@@ -15,6 +14,24 @@ async function api(path, { method = 'GET', body } = {}) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Errore')
   return data
+}
+
+const MESSAGGI = {
+  genera: ['Leggo l\u2019argomento\u2026', 'Scelgo le cose che contano\u2026', 'Scrivo spiegazione e schema\u2026', 'Preparo esempi e disegni\u2026', 'Ci siamo quasi\u2026'],
+  semplifica: ['Rendo tutto piu semplice\u2026', 'Accorcio le frasi\u2026', 'Uso parole piu facili\u2026', 'Ci siamo quasi\u2026']
+}
+
+function LoadingCard({ kind }) {
+  const msgs = MESSAGGI[kind] || MESSAGGI.genera
+  const [i, setI] = useState(0)
+  useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % msgs.length), 2500); return () => clearInterval(t) }, [msgs.length])
+  return (
+    <div className="loading-card">
+      <div className="spinner" />
+      <div className="loading-msg">{msgs[i]}</div>
+      <div className="progress"><div className="bar" /></div>
+    </div>
+  )
 }
 
 function PinGate({ onOk }) {
@@ -42,9 +59,9 @@ export default function App() {
   const [authed, setAuthed] = useState(!!getPin())
   const [ready, setReady] = useState(false)
   const [argomento, setArgomento] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState('')          // '' | 'genera' | 'semplifica'
   const [errore, setErrore] = useState('')
-  const [scheda, setScheda] = useState(null)     // {argomento, materia, slug, studio, schema}
+  const [scheda, setScheda] = useState(null)
   const [tab, setTab] = useState('studio')
   const [archivio, setArchivio] = useState([])
   const [salvato, setSalvato] = useState(false)
@@ -57,14 +74,26 @@ export default function App() {
 
   async function genera() {
     if (!argomento.trim()) return
-    setLoading(true); setErrore(''); setScheda(null); setSalvato(false)
+    setBusy('genera'); setErrore(''); setScheda(null); setSalvato(false)
     try {
       const d = await api('/api/genera', { method: 'POST', body: { argomento } })
       setScheda(d); setTab('studio')
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Generazione fallita. Riprova.')
       if (e.code === 401) setAuthed(false)
-    } finally { setLoading(false) }
+    } finally { setBusy('') }
+  }
+
+  async function semplifica() {
+    if (!scheda) return
+    setBusy('semplifica'); setErrore('')
+    try {
+      const d = await api('/api/semplifica', { method: 'POST', body: scheda })
+      setScheda(d); setSalvato(false)
+    } catch (e) {
+      setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Semplificazione fallita. Riprova.')
+      if (e.code === 401) setAuthed(false)
+    } finally { setBusy('') }
   }
 
   async function salva() {
@@ -94,7 +123,7 @@ export default function App() {
 
   function stampa(quale) {
     document.body.classList.add(`print-${quale}`)
-    const cleanup = () => { document.body.classList.remove(`print-studio`, `print-schema`); window.removeEventListener('afterprint', cleanup) }
+    const cleanup = () => { document.body.classList.remove('print-studio', 'print-schema'); window.removeEventListener('afterprint', cleanup) }
     window.addEventListener('afterprint', cleanup)
     setTimeout(() => window.print(), 60)
   }
@@ -111,15 +140,25 @@ export default function App() {
 
       <section className="ask no-print">
         <label>Di cosa hai bisogno?</label>
-        <textarea rows={2} placeholder="Es. Equazioni di secondo grado · Il moto uniformemente accelerato · La presa della Bastiglia"
+        <textarea rows={2} disabled={!!busy}
+          placeholder="Es. Equazioni di secondo grado · Il moto uniformemente accelerato · La presa della Bastiglia"
           value={argomento} onChange={e => setArgomento(e.target.value)} />
-        <button className="primary" onClick={genera} disabled={loading}>
-          {loading ? 'Preparo le schede…' : 'Crea le schede'}
-        </button>
+        <div className="ask-actions">
+          <button className="primary" onClick={genera} disabled={!!busy}>
+            {busy === 'genera' ? 'Preparo le schede\u2026' : 'Crea le schede'}
+          </button>
+          {scheda && (
+            <button className="semplifica" onClick={semplifica} disabled={!!busy}>
+              {busy === 'semplifica' ? 'Semplifico\u2026' : 'SEMPLIFICA'}
+            </button>
+          )}
+        </div>
         {errore && <div className="err">{errore}</div>}
       </section>
 
-      {scheda && (
+      {busy && <section className="risultato"><LoadingCard kind={busy} /></section>}
+
+      {scheda && !busy && (
         <section className="risultato">
           <div className="toolbar no-print">
             <div className="tabs">
@@ -129,7 +168,7 @@ export default function App() {
             <div className="actions">
               <button onClick={() => stampa('studio')}>Stampa STUDIO</button>
               <button onClick={() => stampa('schema')}>Stampa SCHEMA</button>
-              <button className="save" onClick={salva} disabled={salvato}>{salvato ? 'In archivio ✓' : 'Salva in archivio'}</button>
+              <button className="save" onClick={salva} disabled={salvato}>{salvato ? 'In archivio \u2713' : 'Salva in archivio'}</button>
             </div>
           </div>
 
@@ -152,7 +191,7 @@ export default function App() {
             <li key={r.id}>
               <button className="apri" onClick={() => apri(r.id)}>
                 <span className="a-arg">{r.argomento}</span>
-                <span className="a-meta">{r.materia ? r.materia + ' · ' : ''}{new Date(r.created_at).toLocaleDateString('it-IT')}</span>
+                <span className="a-meta">{r.materia ? r.materia + ' \u00b7 ' : ''}{new Date(r.created_at).toLocaleDateString('it-IT')}</span>
               </button>
               <button className="del" onClick={() => elimina(r.id)} aria-label="elimina">✕</button>
             </li>

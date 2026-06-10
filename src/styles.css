@@ -141,3 +141,18 @@ button.primary:disabled{opacity:.6}
   .callout,.fig,.glossario,.casi,.tab,.tl-item{break-inside:avoid}
   .sez{break-after:avoid}
 }
+
+/* ---------- ask actions + SEMPLIFICA ---------- */
+.ask-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+button.primary{margin-top:0}
+button.semplifica{background:#fff;color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;padding:12px 18px;font-size:16px;font-weight:700;letter-spacing:.03em}
+button.semplifica:disabled{opacity:.6}
+
+/* ---------- loading ---------- */
+.loading-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 6px 24px rgba(0,0,0,.05)}
+.spinner{width:34px;height:34px;border-radius:50%;border:3px solid var(--blue-bd);border-top-color:var(--blue);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-weight:700;color:#0c447c}
+.loading-card .progress{width:min(320px,80%);height:7px;background:var(--blue-bg);border-radius:6px;overflow:hidden}
+.loading-card .bar{width:40%;height:100%;background:var(--blue);border-radius:6px;animation:slide 1.3s ease-in-out infinite}
+@keyframes slide{0%{margin-left:-40%}100%{margin-left:100%}}
