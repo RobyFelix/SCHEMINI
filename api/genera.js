@@ -1,51 +1,36 @@
-import { checkPin, slugify, readBody } from './_lib.js'
+import { checkPin, slugify, readBody, callClaude, BLOCK_TYPES } from './_lib.js'
 
-export const config = { maxDuration: 60 } // Vercel: fino a 60s (Hobby) per la generazione
+export const config = { maxDuration: 60 }
 
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-8'
+const SYSTEM = `Sei un insegnante paziente che prepara schede di studio per una ragazza di SECONDA LICEO SCIENTIFICO con un lieve DSA (memoria di lavoro fragile, difficolta a decodificare parole nuove). Si distrae facilmente e spesso parte SENZA basi sull'argomento. Materie principali: MATEMATICA e FISICA.
 
-const SYSTEM = `Sei un assistente che prepara schede di studio per una studentessa di SECONDA LICEO SCIENTIFICO (scienze applicate), con un lieve DSA (difficolta con la memoria di lavoro e con la decodifica di parole nuove). Le sue materie principali sono MATEMATICA e FISICA.
+Produci DUE schede sullo stesso argomento, con scopi DIVERSI.
 
-Devi produrre DUE schede sullo stesso argomento:
-- "studio": scheda completa per CAPIRE e memorizzare (sta in circa 2 pagine A4).
-- "schema": versione COMPATTA per ripasso veloce e da consultare in verifica (1 pagina, solo l'essenziale).
+== "studio" = UNA VERA LEZIONE DA ZERO ==
+Immagina che chi legge non sappia ASSOLUTAMENTE NIENTE dell'argomento. Non e un riassunto: e una spiegazione che prende per mano.
+- Tono caldo e incoraggiante, dai del "tu", frasi corte e calme. Falle sentire che e piu facile di quanto sembra.
+- PARTI dal "di cosa parliamo" in parole di tutti i giorni, con un esempio concreto o una situazione reale, PRIMA di qualunque termine tecnico o formula.
+- Vai a PICCOLISSIMI passi: ogni blocco aggiunge UNA SOLA idea nuova, dalla piu semplice alla piu difficile.
+- Ogni parola difficile va spiegata SUBITO, li dove compare, con parole semplici. NON rimandare la spiegazione al glossario.
+- Per MATEMATICA/FISICA: comincia SEMPRE da un esempio concreto con numeri piccoli; solo DOPO, quando l'idea e chiara, arriva alla regola generale o alla formula. Mai la formula per prima.
+- Usa esempi concreti e piccoli paragoni di vita quotidiana.
+- Metti il blocco "essenziali" ALLA FINE (come ripasso: "Ora che hai capito, ricordati queste cose"), MAI all'inizio.
+- Il PRIMO blocco della scheda studio sia un "testo" breve e accogliente: in una frase dice di cosa parliamo e che andra tutto bene.
+- Meglio TANTI passi piccoli che pochi blocchi densi.
 
-REGOLE DI STILE (importanti per il suo DSA):
-- Italiano, frasi BREVI, una idea per riga. Poco testo, niente "rumore".
-- Spezza i contenuti in piccoli gruppi (max 3-4 elementi).
-- Ogni termine tecnico difficile va nel glossario, con la sillabazione (es. "Di·scri·mi·nan·te").
-- Inizia sempre con il blocco "essenziali" (le 2-3 cose che contano davvero).
-- Per matematica/fisica: usa SEMPRE almeno una formula e un esempio svolto passo-passo; usa un grafico quando aiuta.
-- Inserisci 1-2 callout "errore" con gli sbagli tipici.
+== "schema" = RIPASSO COMPATTO ==
+Versione corta da rivedere prima della verifica e da tenere sotto mano: 1 pagina, solo l'essenziale (formule, casi, esempio lampo, errori, parole chiave). Qui va bene essere sintetici: chi lo usa ha gia studiato. In questa scheda il blocco "essenziali" puo stare all'inizio.
+
+REGOLE COMUNI:
+- Italiano semplice, frasi BREVI, una idea per riga.
+- Gruppi piccoli (max 3-4 elementi).
+- 1-2 callout "errore" con gli sbagli tipici.
+- Le parole davvero tecniche vanno comunque anche nel glossario, con la sillabazione (es. "Di·scri·mi·nan·te").
 
 FORMATO: rispondi SOLO con un oggetto JSON valido, senza testo prima o dopo, senza backtick.
-Schema:
-{
- "argomento": "string",
- "materia": "Matematica" | "Fisica" | "Storia" | ...,
- "studio": [ ...blocchi... ],
- "schema": [ ...blocchi... ]
-}
+{"argomento":"string","materia":"Matematica|Fisica|Storia|...","studio":[...blocchi...],"schema":[...blocchi...]}
 
-Tipi di blocco disponibili (usa solo questi):
-{"tipo":"essenziali","punti":["...","...","..."]}
-{"tipo":"sezione","numero":1,"titolo":"..."}
-{"tipo":"testo","testo":"... puoi mettere math inline tra segni di dollaro: $x^2$ ..."}
-{"tipo":"elenco","voci":["...","..."]}
-{"tipo":"formula","titolo":"...","latex":"x=\\\\frac{-b\\\\pm\\\\sqrt{\\\\Delta}}{2a}","legenda":"..."}
-{"tipo":"esempio","titolo":"Risolvi ...","passi":["...","..."],"verifica":"..."}
-{"tipo":"casi","voci":[{"condizione":"$\\\\Delta>0$","esito":"due soluzioni","nota":"..."}]}
-{"tipo":"callout","stile":"errore","titolo":"...","testo":"..."}
-{"tipo":"callout","stile":"collegamento","titolo":"...","testo":"..."}
-{"tipo":"grafico","funzione":"x^2-5*x+6","dominio":[-1,5],"punti":[[2,0,"2"],[3,0,"3"]],"xlabel":"x","ylabel":"y","didascalia":"..."}
-{"tipo":"timeline","eventi":[{"data":"...","label":"..."}]}
-{"tipo":"tabella","intestazioni":["...","..."],"righe":[["...","..."],["...","..."]]}
-{"tipo":"glossario","voci":[{"parola":"Discriminante","sillabe":"Di·scri·mi·nan·te","definizione":"..."}]}
-
-Note tecniche:
-- Nei campi "latex" usa sintassi LaTeX: \\\\frac, \\\\sqrt, \\\\pm, ^{}, _{}, \\\\Delta, ecc.
-- In "funzione" usa una espressione in stile JavaScript/mathjs (es. "x^2-5*x+6", "sin(x)", "2*x+1").
-- La scheda "schema" deve essere molto piu sintetica della "studio": stessi concetti, ridotti all'osso.`
+${BLOCK_TYPES}`
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Metodo non consentito' }); return }
@@ -55,38 +40,7 @@ export default async function handler(req, res) {
   if (!argomento || !argomento.trim()) { res.status(400).json({ error: 'Argomento mancante' }); return }
 
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 8000,
-        system: SYSTEM,
-        messages: [{ role: 'user', content: `Argomento: ${argomento.trim()}` }]
-      })
-    })
-
-    if (!r.ok) {
-      const t = await r.text()
-      res.status(502).json({ error: 'Errore dal modello', dettaglio: t.slice(0, 500) })
-      return
-    }
-
-    const data = await r.json()
-    let text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim()
-    text = text.replace(/^```(json)?/i, '').replace(/```$/i, '').trim()
-
-    let parsed
-    try { parsed = JSON.parse(text) }
-    catch {
-      const a = text.indexOf('{'), b = text.lastIndexOf('}')
-      parsed = JSON.parse(text.slice(a, b + 1))
-    }
-
+    const parsed = await callClaude(SYSTEM, `Argomento: ${argomento.trim()}`)
     parsed.argomento = parsed.argomento || argomento.trim()
     parsed.slug = slugify(parsed.argomento)
     res.status(200).json(parsed)
