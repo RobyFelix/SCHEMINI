@@ -2,6 +2,23 @@ import React from 'react'
 import { Inline, Display } from './katexUtil.jsx'
 import Plot from './Plot.jsx'
 
+const CHIEDIBILI = new Set(['testo', 'elenco', 'formula', 'esempio', 'casi', 'callout', 'grafico', 'tabella', 'timeline'])
+
+function bloccoTesto(b) {
+  switch (b.tipo) {
+    case 'testo': return b.testo || ''
+    case 'elenco': return (b.voci || []).join('; ')
+    case 'formula': return `${b.titolo ? b.titolo + ': ' : ''}${b.latex || ''}${b.legenda ? ' (' + b.legenda + ')' : ''}`
+    case 'esempio': return `${b.titolo || 'Esempio'} — ${(b.passi || []).join('; ')}${b.verifica ? ' | Verifica: ' + b.verifica : ''}`
+    case 'casi': return (b.voci || []).map(c => `${c.condizione} -> ${c.esito}`).join('; ')
+    case 'callout': return `${b.titolo || ''}: ${Array.isArray(b.testo) ? b.testo.join('; ') : (b.testo || '')}`
+    case 'grafico': return `grafico di ${b.funzione}${b.didascalia ? ' (' + b.didascalia + ')' : ''}`
+    case 'tabella': return `${(b.intestazioni || []).join(' | ')} :: ${(b.righe || []).map(r => r.join(' / ')).join(' ; ')}`
+    case 'timeline': return (b.eventi || []).map(e => `${e.data}: ${e.label}`).join('; ')
+    default: return ''
+  }
+}
+
 function Callout({ stile, titolo, testo }) {
   const map = {
     errore: { cls: 'red', lab: titolo || 'Attenzione · errore frequente' },
@@ -19,7 +36,7 @@ function Callout({ stile, titolo, testo }) {
   )
 }
 
-function Block({ b }) {
+function Contenuto({ b }) {
   switch (b.tipo) {
     case 'essenziali':
       return (
@@ -29,12 +46,7 @@ function Block({ b }) {
         </div>
       )
     case 'sezione':
-      return (
-        <div className="sez">
-          <span className="num">{b.numero}</span>
-          <h3>{b.titolo}</h3>
-        </div>
-      )
+      return <div className="sez"><span className="num">{b.numero}</span><h3>{b.titolo}</h3></div>
     case 'testo':
       return <p className="testo"><Inline text={b.testo} /></p>
     case 'elenco':
@@ -92,7 +104,7 @@ function Block({ b }) {
           <div className="gloss-grid">
             {(b.voci || []).map((v, i) => (
               <div className="gloss-item" key={i}>
-                <span className="gword">{v.sillabe || v.parola}</span> — <span className="gdef"><Inline text={v.definizione} /></span>
+                <span className="gword">{v.parola}</span> — <span className="gdef"><Inline text={v.definizione} /></span>
               </div>
             ))}
           </div>
@@ -103,16 +115,28 @@ function Block({ b }) {
   }
 }
 
-export default function Scheda({ tipo, materia, argomento, blocchi }) {
+function Block({ b, interattivo, onChiedi }) {
+  const chiedibile = interattivo && onChiedi && CHIEDIBILI.has(b.tipo)
+  if (!chiedibile) return <Contenuto b={b} />
+  return (
+    <div className="blocco-wrap">
+      <Contenuto b={b} />
+      <button className="chiedi no-print" title="Ho una domanda su questo punto"
+        onClick={() => onChiedi(bloccoTesto(b))}>?</button>
+    </div>
+  )
+}
+
+export default function Scheda({ tipo, materia, argomento, blocchi, interattivo, onChiedi }) {
   return (
     <div className={`sheet sheet-${tipo}`}>
       <div className="sheet-head">
-        <span className="chip">{(materia || 'STUDIO').toUpperCase()}</span>
+        <span className="chip">{(materia || (tipo === 'studio' ? 'STUDIO' : 'RIEPILOGO')).toUpperCase()}</span>
         <h2>{argomento}</h2>
-        <span className={`badge ${tipo}`}>{tipo === 'studio' ? 'STUDIO' : 'SCHEMA'}</span>
+        <span className={`badge ${tipo}`}>{tipo === 'studio' ? 'STUDIO' : 'RIEPILOGO'}</span>
       </div>
       <div className="sheet-body">
-        {(blocchi || []).map((b, i) => <Block key={i} b={b} />)}
+        {(blocchi || []).map((b, i) => <Block key={i} b={b} interattivo={interattivo} onChiedi={onChiedi} />)}
       </div>
     </div>
   )
