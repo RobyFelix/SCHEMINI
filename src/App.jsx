@@ -3,10 +3,10 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '0.6'
+const VERSIONE = '0.7'
 
 const MESSAGGI = {
-  genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo schemi e disegnetti vari...", "...so' quasi arrivato...."],
+  genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo i disegnetti...", "...so' quasi arrivato...."],
   semplifica: ['Famo tutto più semplice...', 'Meno sbrodolate...', 'Gnente parole rognose...', '...eccome...']
 }
 
