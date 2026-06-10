@@ -3,7 +3,8 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '0.7'
+const VERSIONE = '1.0'
+const MAX_PAGINE = 5
 
 const MESSAGGI = {
   genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo i disegnetti...", "...so' quasi arrivato...."],
@@ -20,6 +21,23 @@ const IcoArchivio = () => (
     <path d="M3 4h18v4H3z" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" />
   </svg>
 )
+
+function comprimi(file) {
+  return new Promise((res, rej) => {
+    const img = new Image()
+    img.onload = () => {
+      const max = 1500
+      const sc = Math.min(1, max / Math.max(img.width, img.height))
+      const w = Math.round(img.width * sc), h = Math.round(img.height * sc)
+      const c = document.createElement('canvas'); c.width = w; c.height = h
+      c.getContext('2d').drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(img.src)
+      res(c.toDataURL('image/jpeg', 0.72))
+    }
+    img.onerror = () => { URL.revokeObjectURL(img.src); rej(new Error('img')) }
+    img.src = URL.createObjectURL(file)
+  })
+}
 
 function LoadingCard({ kind }) {
   const msgs = MESSAGGI[kind] || MESSAGGI.genera
@@ -58,7 +76,9 @@ function PinGate({ onOk }) {
 export default function App() {
   const [authed, setAuthed] = useState(!!getPin())
   const [ready, setReady] = useState(false)
+  const [inputMode, setInputMode] = useState('testo')
   const [argomento, setArgomento] = useState('')
+  const [foto, setFoto] = useState([])
   const [busy, setBusy] = useState('')
   const [errore, setErrore] = useState('')
   const [scheda, setScheda] = useState(null)
@@ -70,12 +90,27 @@ export default function App() {
   const [regen, setRegen] = useState(false)
   const [holdId, setHoldId] = useState(null)
   const holdTimer = useRef(null)
+  const fileRef = useRef(null)
 
   useEffect(() => {
     if (!authed) return
     api('/api/elenco').then(d => { setArchivio(d); setReady(true) })
       .catch(e => { if (e.code === 401) { setAuthed(false); setReady(true) } else setReady(true) })
   }, [authed])
+
+  async function onPickFiles(e) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    setErrore('')
+    for (const f of files) {
+      try { const d = await comprimi(f); setFoto(p => p.length < MAX_PAGINE ? [...p, d] : p) }
+      catch { /* salta foto non valida */ }
+    }
+  }
+  function rimuoviFoto(i) { setFoto(p => p.filter((_, j) => j !== i)) }
+  function spostaFoto(i, dir) {
+    setFoto(p => { const j = i + dir; if (j < 0 || j >= p.length) return p; const a = [...p]; [a[i], a[j]] = [a[j], a[i]]; return a })
+  }
 
   async function doGenera() {
     if (!argomento.trim()) return
@@ -89,10 +124,27 @@ export default function App() {
     } finally { setBusy('') }
   }
 
-  function genera() {
-    if (busy) return
+  async function doGeneraFoto() {
+    if (foto.length === 0) return
+    setBusy('genera'); setErrore(''); setScheda(null); setSalvato(false)
+    try {
+      const immagini = foto.map(f => ({ media_type: 'image/jpeg', data: f.split(',')[1] }))
+      const d = await api('/api/genera-foto', { method: 'POST', body: { immagini } })
+      setScheda(d); setTab('studio')
+    } catch (e) {
+      setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Lettura delle pagine fallita. Riprova con foto più nitide.')
+      if (e.code === 401) setAuthed(false)
+    } finally { setBusy('') }
+  }
+
+  function procediGenera() { if (inputMode === 'foto') doGeneraFoto(); else doGenera() }
+
+  const puoGenerare = !busy && (inputMode === 'testo' ? !!argomento.trim() : foto.length > 0)
+
+  function avviaGenera() {
+    if (!puoGenerare) return
     if (scheda && !salvato) { setRegen(true); return }
-    doGenera()
+    procediGenera()
   }
 
   async function semplifica() {
@@ -153,8 +205,8 @@ export default function App() {
 
   function apriChat(focus = null) { setChatFocus(focus); setChatOpen(true) }
 
-  async function regenSalvaEGenera() { const ok = await salva(); if (ok) { setRegen(false); doGenera() } }
-  function regenSenzaSalvare() { setRegen(false); doGenera() }
+  async function regenSalvaEGenera() { const ok = await salva(); if (ok) { setRegen(false); procediGenera() } }
+  function regenSenzaSalvare() { setRegen(false); procediGenera() }
   function regenEsci() { setRegen(false) }
 
   if (!authed) return <PinGate onOk={() => setAuthed(true)} />
@@ -173,12 +225,46 @@ export default function App() {
       </header>
 
       <section className="ask no-print">
-        <label>CHE TE SPIEGO?</label>
-        <textarea rows={2} disabled={!!busy}
-          placeholder="Es. Equazioni di secondo grado · Il moto uniformemente accelerato · La presa della Bastiglia"
-          value={argomento} onChange={e => setArgomento(e.target.value)} />
+        <div className="in-tabs">
+          <button className={inputMode === 'testo' ? 'on' : ''} onClick={() => setInputMode('testo')}>Scrivi che voj</button>
+          <button className={inputMode === 'foto' ? 'on' : ''} onClick={() => setInputMode('foto')}>Scatta er libro</button>
+        </div>
+
+        {inputMode === 'testo' ? (
+          <>
+            <label>CHE TE SPIEGO?</label>
+            <textarea rows={2} disabled={!!busy}
+              placeholder="Es. Equazioni di secondo grado · Il moto uniformemente accelerato · La presa della Bastiglia"
+              value={argomento} onChange={e => setArgomento(e.target.value)} />
+          </>
+        ) : (
+          <div className="foto-pane">
+            <div className="foto-hint">Scatta le pagine da studiare, in ordine, con buona luce. Massimo {MAX_PAGINE} pagine.</div>
+            <div className="foto-grid">
+              {foto.map((f, i) => (
+                <div className="foto-cell" key={i}>
+                  <img src={f} alt={`pagina ${i + 1}`} />
+                  <span className="foto-num">{i + 1}</span>
+                  <button className="foto-del" onClick={() => rimuoviFoto(i)} aria-label="rimuovi pagina">✕</button>
+                  <div className="foto-move">
+                    <button onClick={() => spostaFoto(i, -1)} disabled={i === 0} aria-label="sposta indietro">‹</button>
+                    <button onClick={() => spostaFoto(i, 1)} disabled={i === foto.length - 1} aria-label="sposta avanti">›</button>
+                  </div>
+                </div>
+              ))}
+              {foto.length < MAX_PAGINE && !busy && (
+                <button className="foto-add" onClick={() => fileRef.current && fileRef.current.click()}>
+                  <span className="plus">＋</span><span>aggiungi</span>
+                </button>
+              )}
+            </div>
+            <div className="foto-count">{foto.length}/{MAX_PAGINE} pagine</div>
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple hidden onChange={onPickFiles} />
+          </div>
+        )}
+
         <div className="ask-actions">
-          <button className="primary" onClick={genera} disabled={!!busy}>
+          <button className="primary" onClick={avviaGenera} disabled={!puoGenerare}>
             {busy === 'genera' ? 'Preparo le schede…' : 'FAMME LE SCHEDE'}
           </button>
           {scheda && (
