@@ -13,7 +13,9 @@ ${VOCE}
 Questa scheda è ${tipo}
 
 Il tuo compito: riscriverla PIÙ SEMPLICE di com'è adesso, senza perdere i concetti importanti né la correttezza.
-- Frasi ancora più corte, una sola idea per riga.
+- PAROLE DI TUTTI I GIORNI: preferisci parole brevi e comuni; sostituisci i termini tecnici o difficili con parole semplici. Se un termine tecnico DEVE restare, spiegalo lì accanto la prima volta (es. "la circonferenza, cioè il bordo del cerchio").
+- Frasi ancora più corte, una sola idea per riga, senza incisi e senza catene di parole complicate (es. "il prodotto dei due segmenti" → "moltiplichi i due pezzi").
+- Tono concreto e diretto, niente formulazioni astratte.
 - Esempi più semplici, con numeri piccoli.
 - Mantieni le formule corrette, ma quando puoi spiegale anche a parole.
 - Conserva la stessa struttura a blocchi e gli stessi tipi.
