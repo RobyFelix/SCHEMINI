@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.1'
+const VERSIONE = '1.2'
 const MAX_PAGINE = 5
 
 const MESSAGGI = {
@@ -37,6 +37,44 @@ function comprimi(file) {
     img.onerror = () => { URL.revokeObjectURL(img.src); rej(new Error('img')) }
     img.src = URL.createObjectURL(file)
   })
+}
+
+function ritaglia(srcDataUrl, box, pad = 0.06) {
+  return new Promise((res) => {
+    const img = new Image()
+    img.onload = () => {
+      const W = img.width, H = img.height
+      let [x, y, w, h] = box
+      x = Math.max(0, Math.min(1, x)); y = Math.max(0, Math.min(1, y))
+      w = Math.max(0.02, Math.min(1 - x, w)); h = Math.max(0.02, Math.min(1 - y, h))
+      const px = w * pad, py = h * pad
+      const cx = Math.max(0, x - px), cy = Math.max(0, y - py)
+      const cw = Math.min(1 - cx, w + 2 * px), ch = Math.min(1 - cy, h + 2 * py)
+      const sx = Math.round(cx * W), sy = Math.round(cy * H), sw = Math.round(cw * W), sh = Math.round(ch * H)
+      if (sw < 8 || sh < 8) { res(null); return }
+      const c = document.createElement('canvas'); c.width = sw; c.height = sh
+      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+      res(c.toDataURL('image/jpeg', 0.8))
+    }
+    img.onerror = () => res(null)
+    img.src = srcDataUrl
+  })
+}
+
+async function arricchisci(d, foto) {
+  const proc = async (blocchi) => {
+    if (!Array.isArray(blocchi)) return blocchi
+    const out = []
+    for (const b of blocchi) {
+      if (b && b.tipo === 'immagine' && Array.isArray(b.box) && b.box.length === 4) {
+        const src = foto[(b.pagina || 1) - 1]
+        if (src) { const crop = await ritaglia(src, b.box); out.push(crop ? { ...b, src: crop } : b) }
+        else out.push(b)
+      } else out.push(b)
+    }
+    return out
+  }
+  return { ...d, studio: await proc(d.studio), schema: await proc(d.schema) }
 }
 
 function LoadingCard({ kind }) {
@@ -130,7 +168,8 @@ export default function App() {
     try {
       const immagini = foto.map(f => ({ media_type: 'image/jpeg', data: f.split(',')[1] }))
       const d = await api('/api/genera-foto', { method: 'POST', body: { immagini } })
-      setScheda(d); setTab('studio')
+      const dd = await arricchisci(d, foto)
+      setScheda(dd); setTab('studio')
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Lettura delle pagine fallita. Riprova con foto più nitide.')
       if (e.code === 401) setAuthed(false)
@@ -152,8 +191,19 @@ export default function App() {
     const quale = tab
     setBusy('semplifica'); setErrore('')
     try {
-      const d = await api('/api/semplifica', { method: 'POST', body: { argomento: scheda.argomento, materia: scheda.materia, quale, blocchi: scheda[quale] } })
-      setScheda(s => ({ ...s, [quale]: d.blocchi || s[quale] }))
+      const originali = (scheda[quale] || []).filter(b => b && b.tipo === 'immagine')
+      const inviati = (scheda[quale] || []).map(b => (b && b.tipo === 'immagine') ? { tipo: 'immagine', didascalia: b.didascalia } : b)
+      const d = await api('/api/semplifica', { method: 'POST', body: { argomento: scheda.argomento, materia: scheda.materia, quale, blocchi: inviati } })
+      let nuovi = d.blocchi || scheda[quale]
+      let k = 0
+      nuovi = nuovi.map(b => {
+        if (b && b.tipo === 'immagine') {
+          const o = originali[k++]
+          return o ? { ...b, src: o.src, box: o.box, pagina: o.pagina, didascalia: b.didascalia || o.didascalia } : b
+        }
+        return b
+      })
+      setScheda(s => ({ ...s, [quale]: nuovi }))
       setSalvato(false)
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Semplificazione fallita. Riprova.')

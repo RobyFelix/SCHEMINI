@@ -5,6 +5,16 @@ export const config = { maxDuration: 60 }
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-8'
 const MAX_PAGINE = 5
 
+const ADDENDUM_FOTO = `
+
+IMMAGINI DEL LIBRO (solo perché stai leggendo delle foto): oltre ai blocchi sopra, puoi inserire blocchi "immagine" che RIUSANO una figura presente nelle pagine fotografate (schema, disegno, grafico, cartina, foto), quando aiuta davvero la comprensione. Formato:
+{"tipo":"immagine","pagina":N,"box":[x,y,w,h],"didascalia":"..."}
+- "pagina" = numero della foto: 1 è la prima foto, 2 la seconda, e così via.
+- "box" = riquadro NORMALIZZATO della figura su quella pagina, valori tra 0 e 1: [x, y, larghezza, altezza], dove x,y è l'angolo in alto a sinistra. Stima il riquadro il più preciso possibile: deve contenere tutta la figura ma poco altro.
+- Usa "immagine" SOLO per figure vere del libro, mai per ritagliare del testo.
+- Inseriscila nel punto giusto della spiegazione (di solito nello "studio"), con una didascalia breve.
+- Non esagerare: solo le figure che servono davvero, in genere da 0 a 3 in tutto.`
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Metodo non consentito' }); return }
   if (!checkPin(req, res)) return
@@ -19,14 +29,14 @@ export default async function handler(req, res) {
   }))
   content.push({
     type: 'text',
-    text: `Queste sono ${imgs.length} foto delle pagine del libro che la ragazza deve studiare, in ordine. Leggile con attenzione (testo, formule, esempi, figure) e produci le DUE schede (studio e riepilogo) sull'argomento di queste pagine, seguendo esattamente il formato richiesto. Il campo "argomento" deve sintetizzare il tema di queste pagine.`
+    text: `Queste sono ${imgs.length} foto delle pagine del libro che la ragazza deve studiare, in ordine. Leggile con attenzione (testo, formule, esempi, figure) e produci le DUE schede (studio e riepilogo) sull'argomento di queste pagine, seguendo esattamente il formato richiesto. Quando una figura del libro aiuta la comprensione, riusala con un blocco "immagine". Il campo "argomento" deve sintetizzare il tema di queste pagine.`
   })
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 10000, system: GENERA_SYSTEM, messages: [{ role: 'user', content }] })
+      body: JSON.stringify({ model: MODEL, max_tokens: 10000, system: GENERA_SYSTEM + ADDENDUM_FOTO, messages: [{ role: 'user', content }] })
     })
     if (!r.ok) { const t = await r.text(); res.status(502).json({ error: 'Errore dal modello', dettaglio: t.slice(0, 300) }); return }
     const data = await r.json()

@@ -3,7 +3,7 @@ import { Inline, Display } from './katexUtil.jsx'
 import Plot from './Plot.jsx'
 
 const PROSE = new Set(['testo', 'elenco'])
-const BOX = new Set(['callout', 'formula', 'esempio', 'casi', 'grafico', 'tabella', 'timeline'])
+const BOX = new Set(['callout', 'formula', 'esempio', 'casi', 'grafico', 'tabella', 'timeline', 'immagine'])
 
 function bloccoTesto(b) {
   switch (b.tipo) {
@@ -16,6 +16,7 @@ function bloccoTesto(b) {
     case 'grafico': return `grafico di ${b.funzione}${b.didascalia ? ' (' + b.didascalia + ')' : ''}`
     case 'tabella': return `${(b.intestazioni || []).join(' | ')} :: ${(b.righe || []).map(r => r.join(' / ')).join(' ; ')}`
     case 'timeline': return (b.eventi || []).map(e => `${e.data}: ${e.label}`).join('; ')
+    case 'immagine': return `figura del libro: ${b.didascalia || ''}`
     default: return ''
   }
 }
@@ -109,6 +110,13 @@ function Contenuto({ b }) {
           </div>
         </div>
       )
+    case 'immagine':
+      return b.src ? (
+        <figure className="figbook">
+          <img src={b.src} alt={b.didascalia || 'figura del libro'} />
+          {b.didascalia && <figcaption>{b.didascalia}</figcaption>}
+        </figure>
+      ) : null
     default:
       return null
   }
