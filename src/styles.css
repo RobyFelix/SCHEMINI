@@ -25,11 +25,17 @@ h2,h3,h4{margin:0}
 .gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .gate-box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;width:min(360px,92vw);text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.06)}
 .gate-box .logo{font-weight:700;font-size:26px;letter-spacing:.06em}
+.gate-box .gate-ver{color:var(--muted);font-size:13px;font-weight:700;margin-top:3px}
 .gate-box p{color:var(--muted);margin:8px 0 14px}
 .gate-box input{width:100%;padding:12px;font-size:20px;text-align:center;letter-spacing:.4em;border:1.5px solid var(--line);border-radius:10px;margin-bottom:10px}
 .gate-box button{width:100%;padding:12px;border:0;border-radius:10px;background:#111;color:#fff;font-size:16px;font-weight:700}
 .err{color:var(--red);font-size:14px;margin:8px 0}
 .loading-full{min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.loading-full .lf-box{display:flex;flex-direction:column;align-items:center;gap:10px}
+.loading-full .lf-logo{font-weight:700;font-size:30px;letter-spacing:.06em;color:var(--ink)}
+.loading-full .lf-ver{font-size:13px;font-weight:700;margin-top:-6px}
+.loading-full .lf-spin{width:30px;height:30px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ink);animation:spin .8s linear infinite;margin-top:6px}
+.loading-full .lf-msg{font-size:14px}
 
 /* ---------- app shell ---------- */
 .app{max-width:880px;margin:0 auto;padding:16px 14px 60px}
@@ -244,6 +250,8 @@ button.semplifica:disabled{opacity:.6}
 .foto-add{width:92px;height:120px;border:1.5px dashed var(--line);border-radius:10px;background:#fff;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px;font-weight:700}
 .foto-add .plus{font-size:24px;line-height:1}
 .foto-count{color:var(--muted);font-size:13px;margin-top:10px}
+.nuova-richiesta{margin-top:10px;background:#fff;color:var(--muted);border:1.5px solid var(--line);border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;letter-spacing:.03em}
+.nuova-richiesta:active{background:#f0f1f3}
 
 /* ===== v1.2 — figure del libro ===== */
 .figbook{margin:12px auto;text-align:center;break-inside:avoid;page-break-inside:avoid}

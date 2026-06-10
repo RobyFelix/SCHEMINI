@@ -10,7 +10,8 @@ const ADDENDUM_FOTO = `
 IMMAGINI DEL LIBRO (solo perché stai leggendo delle foto): oltre ai blocchi sopra, puoi inserire blocchi "immagine" che RIUSANO una figura presente nelle pagine fotografate (schema, disegno, grafico, cartina, foto), quando aiuta davvero la comprensione. Formato:
 {"tipo":"immagine","pagina":N,"box":[x,y,w,h],"didascalia":"..."}
 - "pagina" = numero della foto: 1 è la prima foto, 2 la seconda, e così via.
-- "box" = riquadro NORMALIZZATO della figura su quella pagina, valori tra 0 e 1: [x, y, larghezza, altezza], dove x,y è l'angolo in alto a sinistra. Stima il riquadro il più preciso possibile: deve contenere tutta la figura ma poco altro.
+- "box" = riquadro NORMALIZZATO della figura su quella pagina, valori tra 0 e 1: [x, y, larghezza, altezza], dove x,y è l'angolo in alto a sinistra. Inquadra TUTTO il disegno (cerchi, punti, lettere, numeri, frecce, etichette) lasciando un piccolo margine attorno: meglio un filo di spazio in più che tagliare via un pezzo. Se sei in dubbio sui bordi, allarga leggermente invece di stringere.
+- NON includere nel box il numero dell'esercizio, le scritte di consegna (es. "COMPLETA", "RISOLVI"), i titoli o il testo che sta attorno alla figura: solo il disegno vero e proprio.
 - Usa "immagine" SOLO per figure vere del libro, mai per ritagliare del testo.
 - Inseriscila nel punto giusto della spiegazione (di solito nello "studio"), con una didascalia breve.
 - Non esagerare: solo le figure che servono davvero, in genere da 0 a 3 in tutto.`

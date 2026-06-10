@@ -3,8 +3,13 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.2'
+const VERSIONE = '1.3'
 const MAX_PAGINE = 5
+
+function normalizza(s) {
+  if (!s) return s
+  return { ...s, studio: Array.isArray(s.studio) ? s.studio : [], schema: Array.isArray(s.schema) ? s.schema : [] }
+}
 
 const MESSAGGI = {
   genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo i disegnetti...", "...so' quasi arrivato...."],
@@ -39,7 +44,35 @@ function comprimi(file) {
   })
 }
 
-function ritaglia(srcDataUrl, box, pad = 0.06) {
+// Ritaglia via i bordi quasi uniformi attorno alla figura (solo verso l'interno,
+// non taglia mai il contenuto). Riceve i pixel di una regione e restituisce il
+// riquadro stretto sul contenuto, oppure null se non c'è nulla da rifilare.
+function rifilaSfondo(imgData, W, H) {
+  const d = imgData.data
+  const lum = i => (d[i] + d[i + 1] + d[i + 2]) / 3
+  const colorato = i => Math.max(Math.abs(d[i] - d[i + 1]), Math.abs(d[i + 1] - d[i + 2]), Math.abs(d[i] - d[i + 2]))
+  // luminosità di sfondo stimata dai 4 angoli (di solito bianco della pagina)
+  const ang = [0, (W - 1) * 4, (H - 1) * W * 4, ((H - 1) * W + (W - 1)) * 4]
+  let bg = 0; for (const i of ang) bg += lum(i); bg /= 4
+  const thr = Math.max(20, bg * 0.12)
+  const isBg = (x, y) => { const i = (y * W + x) * 4; return (bg - lum(i)) < thr && colorato(i) < 30 }
+  const rigaBg = y => { let n = 0; for (let x = 0; x < W; x++) if (isBg(x, y)) n++; return n / W >= 0.985 }
+  const colBg = x => { let n = 0; for (let y = 0; y < H; y++) if (isBg(x, y)) n++; return n / H >= 0.985 }
+  let top = 0; while (top < H - 1 && rigaBg(top)) top++
+  let bot = H - 1; while (bot > top && rigaBg(bot)) bot--
+  let left = 0; while (left < W - 1 && colBg(left)) left++
+  let right = W - 1; while (right > left && colBg(right)) right--
+  const mx = Math.round((right - left) * 0.03), my = Math.round((bot - top) * 0.03)
+  left = Math.max(0, left - mx); right = Math.min(W - 1, right + mx)
+  top = Math.max(0, top - my); bot = Math.min(H - 1, bot + my)
+  const w = right - left + 1, h = bot - top + 1
+  if (w < 8 || h < 8) return null            // regione vuota: lascia stare
+  if (w >= W && h >= H) return null           // niente da rifilare
+  if (w * h < 0.30 * W * H) return null        // rifilatura sospetta: non rischio
+  return { x: left, y: top, w, h }
+}
+
+function ritaglia(srcDataUrl, box, pad = 0.12) {
   return new Promise((res) => {
     const img = new Image()
     img.onload = () => {
@@ -52,8 +85,15 @@ function ritaglia(srcDataUrl, box, pad = 0.06) {
       const cw = Math.min(1 - cx, w + 2 * px), ch = Math.min(1 - cy, h + 2 * py)
       const sx = Math.round(cx * W), sy = Math.round(cy * H), sw = Math.round(cw * W), sh = Math.round(ch * H)
       if (sw < 8 || sh < 8) { res(null); return }
-      const c = document.createElement('canvas'); c.width = sw; c.height = sh
-      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+      // disegno la regione (margine generoso) su una canvas di servizio
+      const t = document.createElement('canvas'); t.width = sw; t.height = sh
+      const tc = t.getContext('2d'); tc.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+      // aggancio ai bordi reali: rifilo lo sfondo uniforme attorno alla figura
+      let rb = null
+      try { rb = rifilaSfondo(tc.getImageData(0, 0, sw, sh), sw, sh) } catch {}
+      const dx = rb ? rb.x : 0, dy = rb ? rb.y : 0, dw = rb ? rb.w : sw, dh = rb ? rb.h : sh
+      const c = document.createElement('canvas'); c.width = dw; c.height = dh
+      c.getContext('2d').drawImage(t, dx, dy, dw, dh, 0, 0, dw, dh)
       res(c.toDataURL('image/jpeg', 0.8))
     }
     img.onerror = () => res(null)
@@ -101,6 +141,7 @@ function PinGate({ onOk }) {
     <div className="gate">
       <div className="gate-box">
         <div className="logo">SCHEMINI</div>
+        <div className="gate-ver">v{VERSIONE}</div>
         <p>Inserisci il PIN per entrare</p>
         <input type="password" inputMode="numeric" value={val} autoFocus
           onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === 'Enter' && entra()} />
@@ -114,7 +155,7 @@ function PinGate({ onOk }) {
 export default function App() {
   const [authed, setAuthed] = useState(!!getPin())
   const [ready, setReady] = useState(false)
-  const [inputMode, setInputMode] = useState('testo')
+  const [inputMode, setInputMode] = useState('foto')
   const [argomento, setArgomento] = useState('')
   const [foto, setFoto] = useState([])
   const [busy, setBusy] = useState('')
@@ -123,11 +164,13 @@ export default function App() {
   const [tab, setTab] = useState('studio')
   const [archivio, setArchivio] = useState([])
   const [salvato, setSalvato] = useState(false)
+  const [salvando, setSalvando] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [chatFocus, setChatFocus] = useState(null)
   const [regen, setRegen] = useState(false)
   const [holdId, setHoldId] = useState(null)
   const holdTimer = useRef(null)
+  const holdStart = useRef(null)
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -146,6 +189,9 @@ export default function App() {
     }
   }
   function rimuoviFoto(i) { setFoto(p => p.filter((_, j) => j !== i)) }
+  function nuovaRichiesta() {
+    setFoto([]); setScheda(null); setErrore(''); setSalvato(false); setSalvando(false); setTab('studio'); setChatOpen(false)
+  }
   function spostaFoto(i, dir) {
     setFoto(p => { const j = i + dir; if (j < 0 || j >= p.length) return p; const a = [...p]; [a[i], a[j]] = [a[j], a[i]]; return a })
   }
@@ -155,7 +201,7 @@ export default function App() {
     setBusy('genera'); setErrore(''); setScheda(null); setSalvato(false)
     try {
       const d = await api('/api/genera', { method: 'POST', body: { argomento } })
-      setScheda(d); setTab('studio')
+      setScheda(normalizza(d)); setTab('studio')
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Generazione fallita. Riprova.')
       if (e.code === 401) setAuthed(false)
@@ -169,7 +215,7 @@ export default function App() {
       const immagini = foto.map(f => ({ media_type: 'image/jpeg', data: f.split(',')[1] }))
       const d = await api('/api/genera-foto', { method: 'POST', body: { immagini } })
       const dd = await arricchisci(d, foto)
-      setScheda(dd); setTab('studio')
+      setScheda(normalizza(dd)); setTab('studio')
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Lettura delle pagine fallita. Riprova con foto più nitide.')
       if (e.code === 401) setAuthed(false)
@@ -212,7 +258,8 @@ export default function App() {
   }
 
   async function salva() {
-    if (!scheda) return true
+    if (!scheda || salvando) return true
+    setSalvando(true); setErrore('')
     try {
       const row = await api('/api/salva', { method: 'POST', body: scheda })
       setSalvato(true)
@@ -221,7 +268,11 @@ export default function App() {
         return [{ id: row.id, argomento: row.argomento, materia: row.materia, created_at: row.created_at }, ...altri]
       })
       return true
-    } catch { setErrore('Salvataggio fallito.'); return false }
+    } catch (e) {
+      if (e.code === 401) { setErrore('PIN scaduto, rientra.'); setAuthed(false) }
+      else setErrore('Salvataggio fallito: ' + (e.message || 'errore'))
+      return false
+    } finally { setSalvando(false) }
   }
 
   async function apri(id) {
@@ -229,7 +280,7 @@ export default function App() {
     try {
       const d = await api(`/api/apri?id=${id}`)
       const c = d.contenuto || {}
-      setScheda({ argomento: d.argomento, materia: d.materia, studio: c.studio, schema: c.schema })
+      setScheda(normalizza({ argomento: d.argomento, materia: d.materia, studio: c.studio, schema: c.schema }))
       setTab('studio'); window.scrollTo(0, 0)
     } catch { setErrore('Apertura fallita.') }
   }
@@ -239,12 +290,20 @@ export default function App() {
     catch { setErrore('Eliminazione fallita.') }
   }
 
-  function startHold(id) {
+  function startHold(e, id) {
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch {}
+    holdStart.current = { x: e.clientX, y: e.clientY }
     setHoldId(id)
     clearTimeout(holdTimer.current)
-    holdTimer.current = setTimeout(() => { eliminaDavvero(id); setHoldId(null) }, 1300)
+    holdTimer.current = setTimeout(() => { eliminaDavvero(id); setHoldId(null); holdStart.current = null }, 1300)
   }
-  function cancelHold() { clearTimeout(holdTimer.current); setHoldId(null) }
+  function moveHold(e) {
+    const s = holdStart.current
+    if (!s) return
+    const dx = e.clientX - s.x, dy = e.clientY - s.y
+    if (dx * dx + dy * dy > 196) cancelHold() // oltre ~14px = movimento vero
+  }
+  function cancelHold() { clearTimeout(holdTimer.current); setHoldId(null); holdStart.current = null }
 
   function stampa(quale) {
     document.body.classList.add(`print-${quale}`)
@@ -260,7 +319,16 @@ export default function App() {
   function regenEsci() { setRegen(false) }
 
   if (!authed) return <PinGate onOk={() => setAuthed(true)} />
-  if (!ready) return <div className="loading-full">Carico…</div>
+  if (!ready) return (
+    <div className="loading-full">
+      <div className="lf-box">
+        <div className="lf-logo">SCHEMINI</div>
+        <div className="lf-ver">v{VERSIONE}</div>
+        <div className="lf-spin" />
+        <div className="lf-msg">Carico…</div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="app">
@@ -276,8 +344,8 @@ export default function App() {
 
       <section className="ask no-print">
         <div className="in-tabs">
-          <button className={inputMode === 'testo' ? 'on' : ''} onClick={() => setInputMode('testo')}>Scrivi che voj</button>
           <button className={inputMode === 'foto' ? 'on' : ''} onClick={() => setInputMode('foto')}>Scatta er libro</button>
+          <button className={inputMode === 'testo' ? 'on' : ''} onClick={() => setInputMode('testo')}>Scrivi che voj</button>
         </div>
 
         {inputMode === 'testo' ? (
@@ -309,6 +377,9 @@ export default function App() {
               )}
             </div>
             <div className="foto-count">{foto.length}/{MAX_PAGINE} pagine</div>
+            {foto.length > 0 && !busy && (
+              <button className="nuova-richiesta" onClick={nuovaRichiesta}>NUOVA RICHIESTA</button>
+            )}
             <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple hidden onChange={onPickFiles} />
           </div>
         )}
@@ -339,7 +410,7 @@ export default function App() {
               <button className="print" onClick={() => stampa('studio')}><IcoStampa />Stampa STUDIO</button>
               <button className="print" onClick={() => stampa('schema')}><IcoStampa />Stampa RIEPILOGO</button>
               <span className="act-sep" />
-              <button className="save" onClick={salva} disabled={salvato}><IcoArchivio />{salvato ? 'In archivio ✓' : 'Salva in archivio'}</button>
+              <button className="save" onClick={salva} disabled={salvato || salvando}><IcoArchivio />{salvando ? 'Salvo…' : (salvato ? 'In archivio ✓' : 'Salva in archivio')}</button>
             </div>
           </div>
 
@@ -367,8 +438,8 @@ export default function App() {
                 <span className="a-meta">{r.materia ? r.materia + ' · ' : ''}{new Date(r.created_at).toLocaleDateString('it-IT')}</span>
               </button>
               <button className="del-hold"
-                onPointerDown={() => startHold(r.id)} onPointerUp={cancelHold}
-                onPointerLeave={cancelHold} onPointerCancel={cancelHold}
+                onPointerDown={(e) => startHold(e, r.id)} onPointerMove={moveHold}
+                onPointerUp={cancelHold} onPointerCancel={cancelHold}
                 title="Tieni premuto per eliminare">
                 <span className="del-x">✕</span>
                 <span className="del-hint">tieni premuto</span>
