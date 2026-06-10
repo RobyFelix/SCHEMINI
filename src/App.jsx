@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.3'
+const VERSIONE = '1.4'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -12,7 +12,7 @@ function normalizza(s) {
 }
 
 const MESSAGGI = {
-  genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo i disegnetti...", "...so' quasi arrivato...."],
+  genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo i disegnetti...", "...c'a posso fa!"],
   semplifica: ['Famo tutto più semplice...', 'Meno sbrodolate...', 'Gnente parole rognose...', '...eccome...']
 }
 

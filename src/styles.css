@@ -157,10 +157,11 @@ button.primary:disabled{opacity:.6}
 }
 
 /* ---------- ask actions + SEMPLIFICA ---------- */
-.ask-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.ask-actions{display:flex;flex-wrap:nowrap;gap:8px;align-items:stretch;margin-top:10px}
 button.primary{margin-top:0}
 button.semplifica{background:#fff;color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;padding:12px 18px;font-size:16px;font-weight:700;letter-spacing:.03em}
 button.semplifica:disabled{opacity:.6}
+.ask-actions button.primary,.ask-actions button.semplifica{flex:1 1 0;min-width:0;padding:12px 10px;font-size:15px;text-align:center}
 
 /* ---------- loading ---------- */
 .loading-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 6px 24px rgba(0,0,0,.05)}
