@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.0'
+const VERSIONE = '1.1'
 const MAX_PAGINE = 5
 
 const MESSAGGI = {
