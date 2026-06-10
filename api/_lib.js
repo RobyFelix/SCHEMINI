@@ -30,6 +30,14 @@ export function readBody(req) {
   try { return JSON.parse(req.body || '{}') } catch { return {} }
 }
 
+// Voce condivisa da schede e chat.
+export const VOCE = `VOCE (sempre):
+- Sintetica ma EMPATICA e GIOVANE: parla come un amico piu grande, bravo e gentile, che ci tiene. Vicino e caldo, MAI sciocco o troppo leggero.
+- Dai del "tu". Vai dritta al punto.
+- Niente saluti, niente frasi motivazionali di circostanza ("respira", "vedrai che e facile", "andra tutto bene"). L'empatia sta nel MODO in cui spieghi, non in incoraggiamenti vuoti.
+- Concisa di default; piu estesa solo se serve davvero o se te lo chiede.
+- Italiano corretto e ACCENTATO: distingui sempre "e" (verbo essere, con accento) da "e" congiunzione; usa "puo", "perche", "cioe", "gia", "piu", "cosi" con i loro accenti giusti. Non omettere mai gli accenti.`
+
 // Descrizione dei tipi di blocco, condivisa da genera e semplifica.
 export const BLOCK_TYPES = `Tipi di blocco disponibili (usa solo questi):
 {"tipo":"essenziali","punti":["...","...","..."]}
@@ -44,13 +52,13 @@ export const BLOCK_TYPES = `Tipi di blocco disponibili (usa solo questi):
 {"tipo":"grafico","funzione":"x^2-5*x+6","dominio":[-1,5],"punti":[[2,0,"2"],[3,0,"3"]],"xlabel":"x","ylabel":"y","didascalia":"..."}
 {"tipo":"timeline","eventi":[{"data":"...","label":"..."}]}
 {"tipo":"tabella","intestazioni":["...","..."],"righe":[["...","..."],["...","..."]]}
-{"tipo":"glossario","voci":[{"parola":"Discriminante","sillabe":"Di·scri·mi·nan·te","definizione":"..."}]}
+{"tipo":"glossario","voci":[{"parola":"Discriminante","definizione":"..."}]}
 
 Note tecniche:
 - Nei campi "latex" usa sintassi LaTeX: \\\\frac, \\\\sqrt, \\\\pm, ^{}, _{}, \\\\Delta, ecc.
-- In "funzione" usa una espressione in stile JavaScript/mathjs (es. "x^2-5*x+6", "sin(x)", "2*x+1").`
+- In "funzione" usa una espressione in stile JavaScript/mathjs (es. "x^2-5*x+6", "sin(x)", "2*x+1").
+- Nel glossario scrivi le parole INTERE, senza spezzarle in sillabe.`
 
-// Chiama il modello Anthropic e restituisce il JSON parsato.
 export async function callClaude(system, user) {
   const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-8'
   const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -60,12 +68,7 @@ export async function callClaude(system, user) {
       'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 10000,
-      system,
-      messages: [{ role: 'user', content: user }]
-    })
+    body: JSON.stringify({ model: MODEL, max_tokens: 10000, system, messages: [{ role: 'user', content: user }] })
   })
   if (!r.ok) { const t = await r.text(); throw new Error(t.slice(0, 400)) }
   const data = await r.json()
