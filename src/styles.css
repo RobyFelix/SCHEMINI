@@ -45,12 +45,17 @@ button.primary:disabled{opacity:.6}
 
 /* ---------- result toolbar ---------- */
 .risultato{margin-top:16px}
-.toolbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:10px}
-.tabs button,.actions button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 12px;font-size:14px}
-.tabs button.on{background:#111;color:#fff;border-color:#111}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.actions .save{background:var(--green);color:#fff;border-color:var(--green)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 14px;justify-content:space-between;align-items:flex-end;margin-bottom:0}
+.tabs{display:flex;gap:4px;position:relative;z-index:2}
+.tab{border:1px solid var(--line);border-bottom:none;background:#eef0f2;color:var(--muted);border-radius:11px 11px 0 0;padding:9px 20px;font-size:14px;font-weight:700;letter-spacing:.05em;margin-bottom:-1px}
+.tab.on{background:#fff;color:var(--ink)}
+.tab-studio.on{border-top:3px solid var(--blue);color:#0c447c}
+.tab-schema.on{border-top:3px solid var(--green);color:#2c6b1f}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:6px}
+.actions .print{background:#4a4f57;color:#fff;border:1px solid #3a3e45;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.actions .save{background:var(--green);color:#fff;border:1px solid var(--green);border-radius:9px;padding:8px 13px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
 .actions .save:disabled{opacity:.6}
+.act-sep{width:1px;height:24px;background:var(--line);margin:0 2px}
 
 /* ---------- archive ---------- */
 .archivio{margin-top:26px}
@@ -70,8 +75,8 @@ button.primary:disabled{opacity:.6}
 .sheet-head{display:flex;align-items:center;gap:10px;border-bottom:2.5px solid #111;padding-bottom:8px;margin-bottom:12px}
 .sheet-head .chip{background:#111;color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:4px 9px;border-radius:5px}
 .sheet-head h2{font-size:22px;flex:1}
-.sheet-head .badge{font-size:11px;font-weight:700;color:#fff;padding:4px 9px;border-radius:5px;letter-spacing:.05em}
-.badge.studio{background:#111}.badge.schema{background:var(--blue)}
+.sheet-head .bollino{width:36px;height:36px;border-radius:50%;color:#fff;font-weight:700;font-size:19px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.bollino.studio{background:var(--blue)}.bollino.schema{background:var(--green)}
 
 .sheet-body .testo{margin:6px 0}
 .sheet-body .elenco{margin:6px 0 10px;padding-left:0;list-style:none}
@@ -212,3 +217,10 @@ button.semplifica:disabled{opacity:.6}
 @keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
 
 @media print{.chat-overlay,.modal-overlay,.ask-btn,.chiedi{display:none !important}}
+
+/* ===== v0.6 ===== */
+/* "?" di sezione: inline accanto al titolo (non nell'angolo) */
+.sez .chiedi{position:static;top:auto;right:auto;opacity:.5;width:22px;height:22px;font-size:13px}
+/* anteprima "Su questo punto": formule renderizzate + taglio via CSS (niente $ spezzati) */
+.chat-focus .cf-lab{font-weight:700;margin-bottom:2px}
+.chat-focus .cf-txt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}

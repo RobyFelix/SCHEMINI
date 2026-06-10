@@ -36,7 +36,12 @@ export default function Chat({ scheda, focus, onClose }) {
           <button className="chat-close" onClick={onClose} aria-label="chiudi">✕</button>
         </div>
 
-        {focus && <div className="chat-focus">Su questo punto: <span>{focus.length > 150 ? focus.slice(0, 150) + '…' : focus}</span></div>}
+        {focus && (
+          <div className="chat-focus">
+            <div className="cf-lab">Su questo punto:</div>
+            <div className="cf-txt"><Inline text={focus} /></div>
+          </div>
+        )}
 
         <div className="chat-body" ref={scroller}>
           {messages.length === 0 && (

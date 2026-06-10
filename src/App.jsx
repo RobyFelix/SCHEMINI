@@ -3,12 +3,23 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '0.5'
+const VERSIONE = '0.6'
 
 const MESSAGGI = {
-  genera: ['Leggo l’argomento…', 'Scelgo le cose che contano…', 'Scrivo la lezione e il riepilogo…', 'Preparo esempi e disegni…', 'Ci siamo quasi…'],
-  semplifica: ['Rendo tutto più semplice…', 'Accorcio le frasi…', 'Uso parole più facili…', 'Ci siamo quasi…']
+  genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo schemi e disegnetti vari...", "...so' quasi arrivato...."],
+  semplifica: ['Famo tutto più semplice...', 'Meno sbrodolate...', 'Gnente parole rognose...', '...eccome...']
 }
+
+const IcoStampa = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="7" rx="1" />
+  </svg>
+)
+const IcoArchivio = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 4h18v4H3z" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" />
+  </svg>
+)
 
 function LoadingCard({ kind }) {
   const msgs = MESSAGGI[kind] || MESSAGGI.genera
@@ -86,10 +97,12 @@ export default function App() {
 
   async function semplifica() {
     if (!scheda || busy) return
+    const quale = tab
     setBusy('semplifica'); setErrore('')
     try {
-      const d = await api('/api/semplifica', { method: 'POST', body: scheda })
-      setScheda(d); setSalvato(false)
+      const d = await api('/api/semplifica', { method: 'POST', body: { argomento: scheda.argomento, materia: scheda.materia, quale, blocchi: scheda[quale] } })
+      setScheda(s => ({ ...s, [quale]: d.blocchi || s[quale] }))
+      setSalvato(false)
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Semplificazione fallita. Riprova.')
       if (e.code === 401) setAuthed(false)
@@ -129,10 +142,7 @@ export default function App() {
     clearTimeout(holdTimer.current)
     holdTimer.current = setTimeout(() => { eliminaDavvero(id); setHoldId(null) }, 1300)
   }
-  function cancelHold() {
-    clearTimeout(holdTimer.current)
-    setHoldId(null)
-  }
+  function cancelHold() { clearTimeout(holdTimer.current); setHoldId(null) }
 
   function stampa(quale) {
     document.body.classList.add(`print-${quale}`)
@@ -143,7 +153,6 @@ export default function App() {
 
   function apriChat(focus = null) { setChatFocus(focus); setChatOpen(true) }
 
-  // azioni dal pop-up rigenera
   async function regenSalvaEGenera() { const ok = await salva(); if (ok) { setRegen(false); doGenera() } }
   function regenSenzaSalvare() { setRegen(false); doGenera() }
   function regenEsci() { setRegen(false) }
@@ -159,22 +168,22 @@ export default function App() {
           <div className="ver">v{VERSIONE}</div>
         </div>
         {scheda && !busy && (
-          <button className="ask-btn" onClick={() => apriChat(null)}>HO UNA DOMANDA</button>
+          <button className="ask-btn" onClick={() => apriChat(null)}>HO UNA DOMANDA!</button>
         )}
       </header>
 
       <section className="ask no-print">
-        <label>Di cosa hai bisogno?</label>
+        <label>CHE TE SPIEGO?</label>
         <textarea rows={2} disabled={!!busy}
           placeholder="Es. Equazioni di secondo grado · Il moto uniformemente accelerato · La presa della Bastiglia"
           value={argomento} onChange={e => setArgomento(e.target.value)} />
         <div className="ask-actions">
           <button className="primary" onClick={genera} disabled={!!busy}>
-            {busy === 'genera' ? 'Preparo le schede…' : 'Crea le schede'}
+            {busy === 'genera' ? 'Preparo le schede…' : 'FAMME LE SCHEDE'}
           </button>
           {scheda && (
             <button className="semplifica" onClick={semplifica} disabled={!!busy}>
-              {busy === 'semplifica' ? 'Semplifico…' : 'SEMPLIFICA'}
+              {busy === 'semplifica' ? 'Semplifico…' : 'TROPPO CASINO!'}
             </button>
           )}
         </div>
@@ -187,13 +196,14 @@ export default function App() {
         <section className="risultato">
           <div className="toolbar no-print">
             <div className="tabs">
-              <button className={tab === 'studio' ? 'on' : ''} onClick={() => setTab('studio')}>Studio</button>
-              <button className={tab === 'schema' ? 'on' : ''} onClick={() => setTab('schema')}>Riepilogo</button>
+              <button className={`tab tab-studio ${tab === 'studio' ? 'on' : ''}`} onClick={() => setTab('studio')}>STUDIO</button>
+              <button className={`tab tab-schema ${tab === 'schema' ? 'on' : ''}`} onClick={() => setTab('schema')}>RIEPILOGO</button>
             </div>
             <div className="actions">
-              <button onClick={() => stampa('studio')}>Stampa STUDIO</button>
-              <button onClick={() => stampa('schema')}>Stampa RIEPILOGO</button>
-              <button className="save" onClick={salva} disabled={salvato}>{salvato ? 'In archivio ✓' : 'Salva in archivio'}</button>
+              <button className="print" onClick={() => stampa('studio')}><IcoStampa />Stampa STUDIO</button>
+              <button className="print" onClick={() => stampa('schema')}><IcoStampa />Stampa RIEPILOGO</button>
+              <span className="act-sep" />
+              <button className="save" onClick={salva} disabled={salvato}><IcoArchivio />{salvato ? 'In archivio ✓' : 'Salva in archivio'}</button>
             </div>
           </div>
 
@@ -211,7 +221,7 @@ export default function App() {
 
       <section className="archivio no-print">
         <h4>Archivio</h4>
-        {archivio.length === 0 && <div className="vuoto">Ancora nessuna scheda salvata.</div>}
+        {archivio.length === 0 && <div className="vuoto">Ancora nessun argomento salvato in archivio</div>}
         <ul>
           {archivio.map(r => (
             <li key={r.id} className={holdId === r.id ? 'holding' : ''}>
