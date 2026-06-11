@@ -63,6 +63,31 @@ button.primary:disabled{opacity:.6}
 .actions .save:disabled{opacity:.6}
 .act-sep{width:1px;height:24px;background:var(--line);margin:0 2px}
 
+/* ---------- test / quiz (solo stampa) ---------- */
+.only-test{display:none}
+.test-livelli{display:flex;flex-direction:column;gap:8px}
+.test-spinner{display:flex;justify-content:center;padding:10px 0 2px}
+.test-print{color:var(--ink);font-size:14px;line-height:1.5}
+.test-head{margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--ink)}
+.test-mat{display:inline-block;background:var(--ink);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:3px 9px;border-radius:5px}
+.test-titolo{font-size:21px;margin:9px 0 7px}
+.test-sub{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:13px;color:#444}
+.test-domande{margin:0;padding-left:24px;display:flex;flex-direction:column;gap:16px}
+.test-q{break-inside:avoid;page-break-inside:avoid}
+.test-q-testo{font-weight:600}
+.test-q-fig{margin:7px 0}
+.test-q-fig .figbook{margin:7px 0;text-align:left}
+.test-opz{list-style:none;margin:7px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.test-opz .test-lett{font-weight:700;margin-right:5px}
+.test-vf{display:flex;gap:28px;margin-top:7px;font-weight:600}
+.test-righe{margin-top:9px;display:flex;flex-direction:column;gap:15px}
+.test-righe span{display:block;border-bottom:1px solid #b9c0c8}
+.test-risposte{break-before:page;page-break-before:always}
+.test-risp-titolo{font-size:18px;border-bottom:2px solid var(--ink);padding-bottom:6px;margin:0 0 13px}
+.test-risposte ol{padding-left:24px;display:flex;flex-direction:column;gap:9px;font-size:13px}
+.test-risp-val{font-weight:700}
+.test-risp-perche{color:#444}
+
 /* ---------- archive ---------- */
 .archivio{margin-top:26px}
 .archivio h4{margin-bottom:8px}
@@ -152,6 +177,8 @@ button.primary:disabled{opacity:.6}
   body.print-studio .only-schema{display:none !important}
   body.print-schema .only-schema{display:block !important}
   body.print-schema .only-studio{display:none !important}
+  body.print-test .only-test{display:block !important}
+  body.print-test .only-studio,body.print-test .only-schema{display:none !important}
   .callout,.fig,.glossario,.casi,.tab,.tl-item{break-inside:avoid}
   .sez{break-after:avoid}
 }

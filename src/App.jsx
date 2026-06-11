@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
-import Scheda from './Scheda.jsx'
+import Scheda, { FigBlock } from './Scheda.jsx'
 import Chat from './Chat.jsx'
+import Test from './Test.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.15'
+const VERSIONE = '1.16'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -288,6 +289,9 @@ export default function App() {
   const [chatFocus, setChatFocus] = useState(null)
   const [regen, setRegen] = useState(false)
   const [confermaElim, setConfermaElim] = useState(null)
+  const [testChiedi, setTestChiedi] = useState(false)
+  const [testBusy, setTestBusy] = useState(false)
+  const [testData, setTestData] = useState(null)
   const cropStage = useRef(null)
   const cropDrag = useRef(null)
   const fileRef = useRef(null)
@@ -476,6 +480,53 @@ export default function App() {
 
   function apriChat(focus = null) { setChatFocus(focus); setChatOpen(true) }
 
+  async function risolviFig(v) {
+    try {
+      if (v.tipo === 'diagramma' && v.descrizione) {
+        const s = await api('/api/schema', { method: 'POST', body: { descrizione: v.descrizione } })
+        if (s && s.svg) return { tipo: 'diagramma', svg: s.svg, didascalia: v.didascalia || '' }
+      } else if (v.tipo === 'immagine_web' && v.query) {
+        const w = await api('/api/immagine-web', { method: 'POST', body: { query: v.query, categoria: v.categoria || '' } })
+        if (w && w.dataUrl) return { tipo: 'immagine_web', src: w.dataUrl, attribution: w.attribution || '', didascalia: v.didascalia || '' }
+      }
+    } catch { /* niente figura */ }
+    return null
+  }
+
+  async function generaTest(difficolta) {
+    setTestChiedi(false); setErrore(''); setTestBusy(true)
+    try {
+      const t = await api('/api/test', { method: 'POST', body: { scheda, difficolta } })
+      const domande = Array.isArray(t.domande) ? t.domande : []
+      let usate = 0
+      const out = []
+      for (const q of domande) {
+        let fig = null
+        if (q.visual && usate < 3) { fig = await risolviFig(q.visual); if (fig) usate++ }
+        out.push({ ...q, visual_fig: fig })
+      }
+      setTestData({ argomento: t.argomento, materia: t.materia, difficolta: t.difficolta, domande: out })
+      setTestBusy(false)
+      setTimeout(() => stampaTest(t.argomento), 120)
+    } catch {
+      setTestBusy(false); setErrore('Non sono riuscito a preparare il test. Riprova.')
+    }
+  }
+
+  function stampaTest(argomento) {
+    const titoloPrec = document.title
+    document.title = (argomento || (scheda && scheda.argomento) || 'SCHEMINI') + ' - TEST'
+    document.body.classList.add('print-test')
+    const cleanup = () => {
+      document.body.classList.remove('print-test')
+      document.title = titoloPrec
+      window.removeEventListener('afterprint', cleanup)
+    }
+    window.addEventListener('afterprint', cleanup)
+    setTimeout(() => window.print(), 60)
+  }
+
+
   async function regenSalvaEGenera() { const ok = await salva(); if (ok) { setRegen(false); procediGenera() } }
   function regenSenzaSalvare() { setRegen(false); procediGenera() }
   function regenEsci() { setRegen(false) }
@@ -579,10 +630,11 @@ export default function App() {
               <button className={`tab tab-schema ${tab === 'schema' ? 'on' : ''}`} onClick={() => setTab('schema')}>RIEPILOGO</button>
             </div>
             <div className="actions">
-              <button className="print" onClick={() => stampa('studio')}><IcoStampa />Stampa STUDIO</button>
-              <button className="print" onClick={() => stampa('schema')}><IcoStampa />Stampa RIEPILOGO</button>
+              <button className="print" onClick={() => stampa('studio')}><IcoStampa />STUDIO</button>
+              <button className="print" onClick={() => stampa('schema')}><IcoStampa />RIEPILOGO</button>
+              <button className="print" onClick={() => setTestChiedi(true)}><IcoStampa />QUIZ</button>
               <span className="act-sep" />
-              <button className="save" onClick={salva} disabled={salvato || salvando}><IcoArchivio />{salvando ? 'Salvo…' : (salvato ? 'In archivio ✓' : 'Salva in archivio')}</button>
+              <button className="save" onClick={salva} disabled={salvato || salvando}><IcoArchivio />{salvando ? 'Salvo…' : (salvato ? 'Salvato ✓' : 'SALVA')}</button>
             </div>
           </div>
 
@@ -594,6 +646,11 @@ export default function App() {
             <div className={`sheet-wrap ${tab === 'schema' ? 'show' : 'hide'} only-schema`}>
               <Scheda tipo="schema" materia={scheda.materia} argomento={scheda.argomento} blocchi={scheda.schema} />
             </div>
+            {testData && (
+              <div className="only-test">
+                <Test {...testData} />
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -626,6 +683,31 @@ export default function App() {
               <button onClick={regenSenzaSalvare}>GENERA SENZA SALVARE</button>
               <button className="m-ghost" onClick={regenEsci}>ESCI</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {testChiedi && (
+        <div className="modal-overlay" onClick={() => setTestChiedi(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Che livello di test?</div>
+            <p className="modal-text">Le domande restano sempre chiare e semplici da leggere: cambia solo quanto bisogna ragionare per rispondere.</p>
+            <div className="modal-actions test-livelli">
+              <button className="m-primary" onClick={() => generaTest('semplice')}>SEMPLICE</button>
+              <button className="m-primary" onClick={() => generaTest('media')}>MEDIA</button>
+              <button className="m-primary" onClick={() => generaTest('difficile')}>DIFFICILE</button>
+              <button className="m-ghost" onClick={() => setTestChiedi(false)}>ANNULLA</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {testBusy && (
+        <div className="modal-overlay">
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Preparo il test…</div>
+            <p className="modal-text">Sto scrivendo le domande e le risposte. Un attimo.</p>
+            <div className="test-spinner"><span className="typing"><i /><i /><i /></span></div>
           </div>
         </div>
       )}
