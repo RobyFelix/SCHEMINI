@@ -134,18 +134,40 @@ export const ADDENDUM_VISIVO = `
 
 VISUALI (immagini nelle schede):
 Lo studente ha un DSA e capisce MOLTO meglio con disegni e schemi che con il solo testo: una scheda tecnica tutta testo è un mezzo fallimento. Quindi CERCA SEMPRE di illustrare i concetti, soprattutto quelli tecnici o visualizzabili.
-Regola pratica: per Fisica, Matematica, Scienze, Geografia — e per qualunque cosa abbia una forma, un meccanismo, un processo, una struttura o una relazione spaziale — inserisci ALMENO una visuale (di norma uno "schema" disegnato), vicino al punto chiave, soprattutto nella scheda "studio". Esempi di schemi attesi: vasi comunicanti (i due recipienti collegati col livello del liquido), piano inclinato con le forze, un circuito, la parabola col vertice, il ciclo dell'acqua. Usa fino a 3 visuali dove aiutano. Evita immagini solo quando il tema è puramente astratto/verbale e un disegno non aggiungerebbe nulla.
+Regola pratica: per Fisica, Matematica, Scienze, Geografia — e per qualunque cosa abbia una forma, un meccanismo, un processo, una struttura o una relazione spaziale — inserisci ALMENO una visuale (di norma un "diagramma" disegnato), vicino al punto chiave, soprattutto nella scheda "studio". Esempi di schemi attesi: vasi comunicanti (i due recipienti collegati col livello del liquido), piano inclinato con le forze, un circuito, la parabola col vertice, il ciclo dell'acqua. Usa fino a 3 visuali dove aiutano. Evita immagini solo quando il tema è puramente astratto/verbale e un disegno non aggiungerebbe nulla.
 Due tipi di blocco:
 
-1) {"tipo":"schema","descrizione":"...","didascalia":"..."}
+1) {"tipo":"diagramma","descrizione":"...","didascalia":"..."}
    Per DISEGNI e SCHEMI: figure geometriche, vasi comunicanti, circuiti, piano inclinato, vettori e forze, diagrammi di flusso, cicli, strutture, relazioni.
    NON disegnare tu: nel campo "descrizione" scrivi in italiano, in modo preciso, COSA va disegnato — gli elementi, le etichette e le relazioni spaziali (es. "due recipienti collegati da un tubo in basso, il liquido allo stesso livello in entrambi, etichette A e B, una linea che mostra il livello uguale"). Al disegno vero e proprio ci pensa il sistema.
    "didascalia": breve frase sotto la figura.
-   REGOLA FERREA: per un argomento tecnico o visualizzabile la scheda "studio" DEVE contenere almeno un blocco "schema". E non descrivere MAI una figura dentro un blocco di testo: se una cosa va illustrata, usa un blocco "schema" con la sua descrizione, mai parole al posto del disegno.
+   REGOLA FERREA: per un argomento tecnico o visualizzabile la scheda "studio" DEVE contenere almeno un blocco "diagramma". E non descrivere MAI una figura dentro un blocco di testo: se una cosa va illustrata, usa un blocco "diagramma" con la sua descrizione, mai parole al posto del disegno.
 
 2) {"tipo":"immagine_web","query":"...","categoria":"monumento|cartina|foto|opera","didascalia":"..."}
    Per cose REALI da reperire (NON disegnabili a mano): monumenti (es. Piramide di Giza), luoghi, cartine geografiche, opere d'arte, foto storiche, oggetti reali. Tu fornisci solo COSA cercare.
    - "query": termini di ricerca precisi, col nome proprio (es. "Pyramid of Giza", "Colosseo Roma", "Italia carta fisica").
    - Usa questo tipo solo quando serve un'immagine reale e un disegno non andrebbe bene.
 
-Regola di scelta: diagramma, relazione, processo o figura geometrica -> usa "schema" (lo disegni tu); cosa reale del mondo -> usa "immagine_web". Punta ad avere sempre almeno una visuale utile quando l'argomento è tecnico o visualizzabile.`
+Regola di scelta: diagramma, relazione, processo o figura geometrica -> usa "diagramma" (lo disegni tu); cosa reale del mondo -> usa "immagine_web". Punta ad avere sempre almeno una visuale utile quando l'argomento è tecnico o visualizzabile.`
+
+export const DISEGNO_REGOLE = `REGOLE DEL DISEGNO:
+- Rispondi SOLO con il codice SVG, niente testo prima o dopo, niente backtick.
+- Inizia con <svg>, includi xmlns='http://www.w3.org/2000/svg' e un viewBox (es. viewBox='0 0 480 300'). Usa apici SINGOLI per gli attributi.
+- Disegno SEMPLICE e CORRETTO: poche forme essenziali, linee scure #1f2d3d (stroke-width 2-3), riempimenti tenui, un tocco di blu #2f74b5 o azzurro chiaro per liquidi/evidenze. Sfondo trasparente.
+- Etichette in ITALIANO, font-size circa 16, leggibili, vicine a ciò che indicano.
+- VIETATO: <script>, gestori di eventi (onclick...), <foreignObject>, <image>, riferimenti o link esterni. Solo forme, linee e testo.
+- Chiaro più che bello: meglio uno schema leggibile e corretto che uno ricco e confuso.
+
+ESEMPIO (vasi comunicanti) — lo stile e la pulizia da seguire:
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 300'>
+  <rect x='60' y='80' width='70' height='160' fill='none' stroke='#1f2d3d' stroke-width='3'/>
+  <rect x='350' y='80' width='70' height='160' fill='none' stroke='#1f2d3d' stroke-width='3'/>
+  <rect x='130' y='215' width='220' height='25' fill='none' stroke='#1f2d3d' stroke-width='3'/>
+  <rect x='62' y='150' width='66' height='89' fill='#bfe0f2'/>
+  <rect x='352' y='150' width='66' height='89' fill='#bfe0f2'/>
+  <rect x='131' y='216' width='218' height='23' fill='#bfe0f2'/>
+  <line x1='40' y1='150' x2='440' y2='150' stroke='#2f74b5' stroke-width='2' stroke-dasharray='6 5'/>
+  <text x='95' y='70' font-size='16' text-anchor='middle' fill='#1f2d3d'>A</text>
+  <text x='385' y='70' font-size='16' text-anchor='middle' fill='#1f2d3d'>B</text>
+  <text x='240' y='140' font-size='15' text-anchor='middle' fill='#2f74b5'>stesso livello</text>
+</svg>`

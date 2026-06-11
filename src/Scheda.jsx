@@ -3,7 +3,7 @@ import { Inline, Display } from './katexUtil.jsx'
 import Plot from './Plot.jsx'
 
 const PROSE = new Set(['testo', 'elenco'])
-const BOX = new Set(['callout', 'formula', 'esempio', 'casi', 'grafico', 'tabella', 'timeline', 'immagine', 'schema', 'immagine_web'])
+const BOX = new Set(['callout', 'formula', 'esempio', 'casi', 'grafico', 'tabella', 'timeline', 'immagine', 'schema', 'diagramma', 'immagine_web'])
 
 // Ripulisce l'SVG generato dal modello prima di mostrarlo (difesa minima):
 // via script, gestori di eventi, foreignObject, riferimenti esterni e javascript:.
@@ -38,6 +38,7 @@ function bloccoTesto(b) {
     case 'timeline': return (b.eventi || []).map(e => `${e.data}: ${e.label}`).join('; ')
     case 'immagine': return `figura del libro: ${b.didascalia || ''}`
     case 'schema': return `schema: ${b.didascalia || ''}`
+    case 'diagramma': return `schema: ${b.didascalia || ''}`
     case 'immagine_web': return `immagine: ${b.didascalia || ''}`
     default: return ''
   }
@@ -139,7 +140,8 @@ function Contenuto({ b }) {
           {b.didascalia && <figcaption>{b.didascalia}</figcaption>}
         </figure>
       ) : null
-    case 'schema': {
+    case 'schema':
+    case 'diagramma': {
       const svg = pulisciSvg(b.svg)
       return svg ? (
         <figure className="figbook figsvg">

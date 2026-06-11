@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.10'
+const VERSIONE = '1.11'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -192,7 +192,7 @@ async function arricchisciTesto(d) {
         return (r && r.dataUrl) ? { ...b, src: r.dataUrl, attribution: r.attribution || '' } : null
       } catch { return null }
     }
-    if (b && b.tipo === 'schema' && !b.svg && b.descrizione) {
+    if (b && (b.tipo === 'diagramma' || b.tipo === 'schema') && !b.svg && b.descrizione) {
       try {
         const r = await api('/api/schema', { method: 'POST', body: { descrizione: b.descrizione } })
         return (r && r.svg) ? { ...b, svg: r.svg } : null
@@ -206,6 +206,25 @@ async function arricchisciTesto(d) {
     return out.filter(b => b !== null)
   }
   return { ...d, studio: await proc(d.studio), schema: await proc(d.schema) }
+}
+
+// Rete di sicurezza: se la scheda "studio" è uscita SENZA alcuna figura, faccio
+// disegnare uno schema dell'argomento e lo inserisco dopo la prima sezione.
+async function garantisciSchema(d) {
+  const VIS = new Set(['diagramma', 'schema', 'immagine', 'immagine_web'])
+  const studio = Array.isArray(d.studio) ? d.studio : []
+  const haFigura = studio.some(b => b && (b.tipo === 'grafico' || (VIS.has(b.tipo) && (b.svg || b.src))))
+  if (haFigura) return d
+  try {
+    const r = await api('/api/illustra', { method: 'POST', body: { argomento: d.argomento, materia: d.materia } })
+    if (r && r.svg) {
+      const fig = { tipo: 'diagramma', svg: r.svg, didascalia: d.argomento }
+      let pos = studio.findIndex(b => b && b.tipo === 'sezione')
+      pos = pos === -1 ? 0 : pos + 1
+      return { ...d, studio: [...studio.slice(0, pos), fig, ...studio.slice(pos)] }
+    }
+  } catch { /* niente figura: pazienza */ }
+  return d
 }
 
 function LoadingCard({ kind }) {
@@ -341,7 +360,8 @@ export default function App() {
     try {
       const d = await api('/api/genera', { method: 'POST', body: { argomento } })
       const dd = await arricchisciTesto(d)
-      setScheda(normalizza(dd)); setTab('studio')
+      const fin = await garantisciSchema(dd)
+      setScheda(normalizza(fin)); setTab('studio')
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Generazione fallita. Riprova.')
       if (e.code === 401) setAuthed(false)

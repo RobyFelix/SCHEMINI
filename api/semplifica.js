@@ -19,7 +19,7 @@ Il tuo compito: riscriverla PIÙ SEMPLICE di com'è adesso, senza perdere i conc
 - Esempi più semplici, con numeri piccoli.
 - Mantieni le formule corrette, ma quando puoi spiegale anche a parole.
 - Conserva la stessa struttura a blocchi e gli stessi tipi.
-- Se trovi blocchi di tipo "immagine", "schema" o "immagine_web", riportali IDENTICI dove sono, senza modificarli (non toccare i campi "src", "svg", "descrizione", "query", "box", "attribution").
+- Se trovi blocchi di tipo "immagine", "schema", "diagramma" o "immagine_web", riportali IDENTICI dove sono, senza modificarli (non toccare i campi "src", "svg", "descrizione", "query", "box", "attribution").
 - Glossario: parole INTERE, mai spezzate in sillabe.
 - Lavora SOLO su questi blocchi: non inventare un'altra scheda.
 
