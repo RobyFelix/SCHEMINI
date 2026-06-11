@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.11'
+const VERSIONE = '1.12'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
