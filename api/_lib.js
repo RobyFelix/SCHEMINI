@@ -60,6 +60,22 @@ Note tecniche:
 - In "funzione" usa una espressione in stile JavaScript/mathjs (es. "x^2-5*x+6", "sin(x)", "2*x+1").
 - Nel glossario scrivi le parole INTERE, senza spezzarle in sillabe.`
 
+export async function callClaudeText(system, user, opts = {}) {
+  const MODEL = opts.model || process.env.ANTHROPIC_MODEL || 'claude-opus-4-8'
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({ model: MODEL, max_tokens: opts.max_tokens || 4000, system, messages: [{ role: 'user', content: user }] })
+  })
+  if (!r.ok) { const t = await r.text(); throw new Error(t.slice(0, 400)) }
+  const data = await r.json()
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n')
+}
+
 export async function callClaude(system, user) {
   const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-4-8'
   const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -121,13 +137,11 @@ Lo studente ha un DSA e capisce MOLTO meglio con disegni e schemi che con il sol
 Regola pratica: per Fisica, Matematica, Scienze, Geografia — e per qualunque cosa abbia una forma, un meccanismo, un processo, una struttura o una relazione spaziale — inserisci ALMENO una visuale (di norma uno "schema" disegnato), vicino al punto chiave, soprattutto nella scheda "studio". Esempi di schemi attesi: vasi comunicanti (i due recipienti collegati col livello del liquido), piano inclinato con le forze, un circuito, la parabola col vertice, il ciclo dell'acqua. Usa fino a 3 visuali dove aiutano. Evita immagini solo quando il tema è puramente astratto/verbale e un disegno non aggiungerebbe nulla.
 Due tipi di blocco:
 
-1) {"tipo":"schema","svg":"<svg ...>...</svg>","didascalia":"..."}
-   Per DISEGNI e SCHEMI che puoi tracciare tu: figure geometriche, vasi comunicanti, circuiti, piano inclinato, vettori e forze, diagrammi di flusso, cicli, strutture, relazioni. Disegni l'immagine direttamente in SVG.
-   Regole per l'SVG:
-   - Deve iniziare con <svg> e contenere un viewBox (es. viewBox='0 0 480 320'). Usa apici SINGOLI per gli attributi, così sta nel JSON senza problemi.
-   - Disegno PULITO e CORRETTO: linee nere/grigio scuro (#1f2d3d), un tocco di blu (#2f74b5) per evidenziare, sfondo trasparente. Etichette in italiano, leggibili (font-size circa 16).
-   - VIETATO: <script>, gestori di eventi (onclick ecc.), <foreignObject>, immagini o riferimenti esterni. Solo forme, linee e testo.
-   - Tienilo semplice: meglio uno schema chiaro che uno complicato.
+1) {"tipo":"schema","descrizione":"...","didascalia":"..."}
+   Per DISEGNI e SCHEMI: figure geometriche, vasi comunicanti, circuiti, piano inclinato, vettori e forze, diagrammi di flusso, cicli, strutture, relazioni.
+   NON disegnare tu: nel campo "descrizione" scrivi in italiano, in modo preciso, COSA va disegnato — gli elementi, le etichette e le relazioni spaziali (es. "due recipienti collegati da un tubo in basso, il liquido allo stesso livello in entrambi, etichette A e B, una linea che mostra il livello uguale"). Al disegno vero e proprio ci pensa il sistema.
+   "didascalia": breve frase sotto la figura.
+   REGOLA FERREA: per un argomento tecnico o visualizzabile la scheda "studio" DEVE contenere almeno un blocco "schema". E non descrivere MAI una figura dentro un blocco di testo: se una cosa va illustrata, usa un blocco "schema" con la sua descrizione, mai parole al posto del disegno.
 
 2) {"tipo":"immagine_web","query":"...","categoria":"monumento|cartina|foto|opera","didascalia":"..."}
    Per cose REALI da reperire (NON disegnabili a mano): monumenti (es. Piramide di Giza), luoghi, cartine geografiche, opere d'arte, foto storiche, oggetti reali. Tu fornisci solo COSA cercare.

@@ -1,4 +1,4 @@
-const CACHE = 'schemini-v1.9'
+const CACHE = 'schemini-v1.10'
 
 self.addEventListener('install', () => { self.skipWaiting() })
 

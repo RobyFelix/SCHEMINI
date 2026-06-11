@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.9'
+const VERSIONE = '1.10'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -183,21 +183,27 @@ function analizzaFoto(dataUrl) {
     img.src = dataUrl
   })
 }
-// Gli "schema" (SVG) non vanno risolti: si disegnano da soli.
+// Gli "schema" ora arrivano come descrizione: il disegno SVG lo fa una chiamata dedicata.
 async function arricchisciTesto(d) {
+  const risolvi = async (b) => {
+    if (b && b.tipo === 'immagine_web' && b.query) {
+      try {
+        const r = await api('/api/immagine-web', { method: 'POST', body: { query: b.query, categoria: b.categoria || '' } })
+        return (r && r.dataUrl) ? { ...b, src: r.dataUrl, attribution: r.attribution || '' } : null
+      } catch { return null }
+    }
+    if (b && b.tipo === 'schema' && !b.svg && b.descrizione) {
+      try {
+        const r = await api('/api/schema', { method: 'POST', body: { descrizione: b.descrizione } })
+        return (r && r.svg) ? { ...b, svg: r.svg } : null
+      } catch { return null }
+    }
+    return b
+  }
   const proc = async (blocchi) => {
     if (!Array.isArray(blocchi)) return blocchi
-    const out = []
-    for (const b of blocchi) {
-      if (b && b.tipo === 'immagine_web' && b.query) {
-        try {
-          const r = await api('/api/immagine-web', { method: 'POST', body: { query: b.query, categoria: b.categoria || '' } })
-          if (r && r.dataUrl) out.push({ ...b, src: r.dataUrl, attribution: r.attribution || '' })
-          // se non trovata, scarto il blocco: niente figura rotta
-        } catch { /* scarto in silenzio */ }
-      } else out.push(b)
-    }
-    return out
+    const out = await Promise.all(blocchi.map(risolvi))
+    return out.filter(b => b !== null)
   }
   return { ...d, studio: await proc(d.studio), schema: await proc(d.schema) }
 }
@@ -273,14 +279,21 @@ export default function App() {
     const files = Array.from(e.target.files || [])
     e.target.value = ''
     setErrore('')
+    let nuovoIdx = -1
     for (const f of files) {
       try {
         const d = await comprimi(f)
         const check = await analizzaFoto(d)
-        setFoto(p => p.length < MAX_PAGINE ? [...p, { url: d, orig: d, top: 0, bottom: 1, check }] : p)
+        setFoto(p => {
+          if (p.length >= MAX_PAGINE) return p
+          nuovoIdx = p.length
+          return [...p, { url: d, orig: d, top: 0, bottom: 1, check }]
+        })
       }
       catch { /* salta foto non valida */ }
     }
+    // se hai scattato UNA sola pagina, apri subito il ritaglio (croppi e confermi lì)
+    if (files.length === 1 && nuovoIdx >= 0) apriCrop(nuovoIdx)
   }
   function rimuoviFoto(i) { setFoto(p => p.filter((_, j) => j !== i)) }
   function nuovaRichiesta() {
@@ -290,8 +303,10 @@ export default function App() {
     setFoto(p => { const j = i + dir; if (j < 0 || j >= p.length) return p; const a = [...p]; [a[i], a[j]] = [a[j], a[i]]; return a })
   }
   function apriCrop(i) {
-    const f = foto[i]; if (!f) return
-    setCropTop(f.top ?? 0); setCropBot(f.bottom ?? 1); setCropIdx(i)
+    const f = foto[i]
+    setCropTop(f && f.top != null ? f.top : 0)
+    setCropBot(f && f.bottom != null ? f.bottom : 1)
+    setCropIdx(i)
   }
   function chiudiCrop() { cropDrag.current = null; setCropIdx(null) }
   function resetCrop() { setCropTop(0); setCropBot(1) }
@@ -499,8 +514,10 @@ export default function App() {
                   <span className="foto-num">{i + 1}</span>
                   <button className="foto-del" onClick={() => rimuoviFoto(i)} aria-label="rimuovi pagina">✕</button>
                   <button className={'foto-crop' + ((f.top > 0.001 || f.bottom < 0.999) ? ' on' : '')} onClick={() => apriCrop(i)} aria-label="ritaglia pagina"><IcoCrop /></button>
-                  {f.check && !f.check.nitida && (
-                    <span className="foto-warn" title={`Foto ${f.check.problema}: conviene riscattarla`}>!</span>
+                  {f.check && (
+                    f.check.nitida
+                      ? <span className="foto-ok" title="Foto a posto">✓</span>
+                      : <span className="foto-warn" title={`Foto ${f.check.problema}: conviene riscattarla`}>!</span>
                   )}
                   <div className="foto-move">
                     <button onClick={() => spostaFoto(i, -1)} disabled={i === 0} aria-label="sposta indietro">‹</button>

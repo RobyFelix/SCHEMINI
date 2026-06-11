@@ -10,7 +10,11 @@ const BOX = new Set(['callout', 'formula', 'esempio', 'casi', 'grafico', 'tabell
 function pulisciSvg(svg) {
   if (typeof svg !== 'string') return ''
   let s = svg.trim()
-  if (!/^<svg[\s>]/i.test(s)) return ''
+  // estrai solo dal primo <svg al </svg> finale (toglie prologo XML o testo attorno)
+  const a = s.search(/<svg[\s>]/i)
+  const b = s.toLowerCase().lastIndexOf('</svg>')
+  if (a === -1 || b === -1 || b < a) return ''
+  s = s.slice(a, b + 6)
   s = s.replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
     .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
