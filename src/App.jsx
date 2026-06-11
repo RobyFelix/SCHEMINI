@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.4'
+const VERSIONE = '1.5'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -26,6 +26,11 @@ const IcoArchivio = () => (
     <path d="M3 4h18v4H3z" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" />
   </svg>
 )
+const IcoCrop = () => (
+  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 2v16h16" /><path d="M2 6h16v16" />
+  </svg>
+)
 
 function comprimi(file) {
   return new Promise((res, rej) => {
@@ -41,6 +46,25 @@ function comprimi(file) {
     }
     img.onerror = () => { URL.revokeObjectURL(img.src); rej(new Error('img')) }
     img.src = URL.createObjectURL(file)
+  })
+}
+
+// Ritaglio verticale: tiene la fascia tra top e bottom (normalizzati 0..1),
+// scartando alto e basso. Restituisce un nuovo data-URL.
+function ritagliaVerticale(srcDataUrl, top, bottom) {
+  return new Promise((res) => {
+    const img = new Image()
+    img.onload = () => {
+      const W = img.width, H = img.height
+      const y0 = Math.round(Math.max(0, Math.min(1, top)) * H)
+      const y1 = Math.round(Math.max(0, Math.min(1, bottom)) * H)
+      const h = Math.max(1, y1 - y0)
+      const c = document.createElement('canvas'); c.width = W; c.height = h
+      c.getContext('2d').drawImage(img, 0, y0, W, h, 0, 0, W, h)
+      res(c.toDataURL('image/jpeg', 0.8))
+    }
+    img.onerror = () => res(srcDataUrl)
+    img.src = srcDataUrl
   })
 }
 
@@ -107,7 +131,7 @@ async function arricchisci(d, foto) {
     const out = []
     for (const b of blocchi) {
       if (b && b.tipo === 'immagine' && Array.isArray(b.box) && b.box.length === 4) {
-        const src = foto[(b.pagina || 1) - 1]
+        const src = (foto[(b.pagina || 1) - 1] || {}).url
         if (src) { const crop = await ritaglia(src, b.box); out.push(crop ? { ...b, src: crop } : b) }
         else out.push(b)
       } else out.push(b)
@@ -158,6 +182,9 @@ export default function App() {
   const [inputMode, setInputMode] = useState('foto')
   const [argomento, setArgomento] = useState('')
   const [foto, setFoto] = useState([])
+  const [cropIdx, setCropIdx] = useState(null)
+  const [cropTop, setCropTop] = useState(0)
+  const [cropBot, setCropBot] = useState(1)
   const [busy, setBusy] = useState('')
   const [errore, setErrore] = useState('')
   const [scheda, setScheda] = useState(null)
@@ -171,6 +198,8 @@ export default function App() {
   const [holdId, setHoldId] = useState(null)
   const holdTimer = useRef(null)
   const holdStart = useRef(null)
+  const cropStage = useRef(null)
+  const cropDrag = useRef(null)
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -184,7 +213,7 @@ export default function App() {
     e.target.value = ''
     setErrore('')
     for (const f of files) {
-      try { const d = await comprimi(f); setFoto(p => p.length < MAX_PAGINE ? [...p, d] : p) }
+      try { const d = await comprimi(f); setFoto(p => p.length < MAX_PAGINE ? [...p, { url: d, orig: d, top: 0, bottom: 1 }] : p) }
       catch { /* salta foto non valida */ }
     }
   }
@@ -195,6 +224,35 @@ export default function App() {
   function spostaFoto(i, dir) {
     setFoto(p => { const j = i + dir; if (j < 0 || j >= p.length) return p; const a = [...p]; [a[i], a[j]] = [a[j], a[i]]; return a })
   }
+  function apriCrop(i) {
+    const f = foto[i]; if (!f) return
+    setCropTop(f.top ?? 0); setCropBot(f.bottom ?? 1); setCropIdx(i)
+  }
+  function chiudiCrop() { cropDrag.current = null; setCropIdx(null) }
+  function resetCrop() { setCropTop(0); setCropBot(1) }
+  async function applicaCrop() {
+    const i = cropIdx; if (i == null) return
+    const f = foto[i]; if (!f) { chiudiCrop(); return }
+    const noCrop = cropTop <= 0.001 && cropBot >= 0.999
+    const url = noCrop ? f.orig : await ritagliaVerticale(f.orig, cropTop, cropBot)
+    setFoto(p => p.map((x, j) => j === i ? { ...x, top: noCrop ? 0 : cropTop, bottom: noCrop ? 1 : cropBot, url } : x))
+    chiudiCrop()
+  }
+  function cropDown(e, which) {
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch {}
+    cropDrag.current = which
+  }
+  function cropMove(e) {
+    if (!cropDrag.current || !cropStage.current) return
+    const r = cropStage.current.getBoundingClientRect()
+    if (!r.height) return
+    let y = (e.clientY - r.top) / r.height
+    y = Math.max(0, Math.min(1, y))
+    const MIN = 0.2
+    if (cropDrag.current === 'top') setCropTop(Math.min(y, cropBot - MIN))
+    else setCropBot(Math.max(y, cropTop + MIN))
+  }
+  function cropUp() { cropDrag.current = null }
 
   async function doGenera() {
     if (!argomento.trim()) return
@@ -212,7 +270,7 @@ export default function App() {
     if (foto.length === 0) return
     setBusy('genera'); setErrore(''); setScheda(null); setSalvato(false)
     try {
-      const immagini = foto.map(f => ({ media_type: 'image/jpeg', data: f.split(',')[1] }))
+      const immagini = foto.map(f => ({ media_type: 'image/jpeg', data: f.url.split(',')[1] }))
       const d = await api('/api/genera-foto', { method: 'POST', body: { immagini } })
       const dd = await arricchisci(d, foto)
       setScheda(normalizza(dd)); setTab('studio')
@@ -361,9 +419,10 @@ export default function App() {
             <div className="foto-grid">
               {foto.map((f, i) => (
                 <div className="foto-cell" key={i}>
-                  <img src={f} alt={`pagina ${i + 1}`} />
+                  <img src={f.url} alt={`pagina ${i + 1}`} />
                   <span className="foto-num">{i + 1}</span>
                   <button className="foto-del" onClick={() => rimuoviFoto(i)} aria-label="rimuovi pagina">✕</button>
+                  <button className={'foto-crop' + ((f.top > 0.001 || f.bottom < 0.999) ? ' on' : '')} onClick={() => apriCrop(i)} aria-label="ritaglia pagina"><IcoCrop /></button>
                   <div className="foto-move">
                     <button onClick={() => spostaFoto(i, -1)} disabled={i === 0} aria-label="sposta indietro">‹</button>
                     <button onClick={() => spostaFoto(i, 1)} disabled={i === foto.length - 1} aria-label="sposta avanti">›</button>
@@ -460,6 +519,27 @@ export default function App() {
               <button className="m-primary" onClick={regenSalvaEGenera}>SALVA e GENERA</button>
               <button onClick={regenSenzaSalvare}>GENERA SENZA SALVARE</button>
               <button className="m-ghost" onClick={regenEsci}>ESCI</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cropIdx != null && foto[cropIdx] && (
+        <div className="crop-overlay">
+          <div className="crop-card">
+            <div className="crop-title">Ritaglia la pagina {cropIdx + 1}</div>
+            <div className="crop-hint">Trascina le maniglie per togliere la parte in alto o in basso.</div>
+            <div className="crop-stage" ref={cropStage} onPointerMove={cropMove} onPointerUp={cropUp} onPointerCancel={cropUp}>
+              <img src={foto[cropIdx].orig} alt="pagina" draggable="false" />
+              <div className="crop-shade" style={{ top: 0, height: (cropTop * 100) + '%' }} />
+              <div className="crop-shade" style={{ top: (cropBot * 100) + '%', bottom: 0 }} />
+              <div className="crop-handle" style={{ top: (cropTop * 100) + '%' }} onPointerDown={(e) => cropDown(e, 'top')}><span /></div>
+              <div className="crop-handle" style={{ top: (cropBot * 100) + '%' }} onPointerDown={(e) => cropDown(e, 'bot')}><span /></div>
+            </div>
+            <div className="crop-actions">
+              <button className="crop-reset" onClick={resetCrop}>Tutta la pagina</button>
+              <button className="crop-cancel" onClick={chiudiCrop}>Annulla</button>
+              <button className="crop-ok" onClick={applicaCrop}>Fatto</button>
             </div>
           </div>
         </div>
