@@ -163,6 +163,29 @@ function Contenuto({ b }) {
   }
 }
 
+export function FigBlock({ b }) {
+  if (!b) return null
+  if (b.tipo === 'schema' || b.tipo === 'diagramma') {
+    const svg = pulisciSvg(b.svg)
+    return svg ? (
+      <figure className="figbook figsvg">
+        <div className="svg-wrap" dangerouslySetInnerHTML={{ __html: svg }} />
+        {b.didascalia && <figcaption>{b.didascalia}</figcaption>}
+      </figure>
+    ) : null
+  }
+  if (b.tipo === 'immagine_web' || b.tipo === 'immagine') {
+    return b.src ? (
+      <figure className={`figbook ${b.tipo === 'immagine_web' ? 'figweb' : ''}`}>
+        <img src={b.src} alt={b.didascalia || 'immagine'} />
+        {b.didascalia && <figcaption>{b.didascalia}</figcaption>}
+        {b.attribution && <div className="fig-credit">{b.attribution}</div>}
+      </figure>
+    ) : null
+  }
+  return null
+}
+
 function ChiediBtn({ onClick, cls }) {
   return <button className={`chiedi no-print ${cls || ''}`} title="Ho una domanda su questo punto" onClick={onClick}>?</button>
 }

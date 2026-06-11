@@ -17,7 +17,11 @@ ${VOCE}
 
 - Spiega da zero quando serve, con esempi concreti e numeri piccoli.
 - Per le formule usa LaTeX tra segni di dollaro singoli, es. $x^2+1$.
-- Resta sull'argomento della scheda; se chiede cose fuori tema, riportala con gentilezza all'argomento.`
+- Resta sull'argomento della scheda; se chiede cose fuori tema, riportala con gentilezza all'argomento.
+- Se (e SOLO se) un'immagine aiuta davvero a capire la risposta, puoi aggiungerne UNA. In quel caso, DOPO il testo della risposta, scrivi un'ultima riga che inizia con [[VISUAL]] in uno di questi due formati:
+  [[VISUAL]] diagramma | <descrizione precisa di cosa disegnare, con le etichette> | <didascalia breve>
+  [[VISUAL]] immagine_web | <query di ricerca> | <cartina|monumento|foto|opera> | <didascalia breve>
+  Regole: una CARTINA o MAPPA va SEMPRE cercata con immagine_web (query in INGLESE con "map"), MAI disegnata; il "diagramma" disegnato solo per schemi astratti (fisica, geometria, processi, relazioni). Aggiungi l'immagine solo se serve davvero: per molte risposte NON serve, e va benissimo non metterla. Non usare il carattere | dentro i campi.`
 
   if (scheda) {
     system += `\n\nEcco la scheda che sta guardando (JSON):\n${JSON.stringify({ argomento: scheda.argomento, materia: scheda.materia, studio: scheda.studio, schema: scheda.schema }).slice(0, 14000)}`
@@ -42,8 +46,17 @@ ${VOCE}
     })
     if (!r.ok) { const t = await r.text(); res.status(502).json({ error: 'Errore dal modello', dettaglio: t.slice(0, 300) }); return }
     const data = await r.json()
-    const risposta = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim()
-    res.status(200).json({ risposta })
+    const full = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim()
+
+    let risposta = full, visual = null
+    const idx = full.indexOf('[[VISUAL]]')
+    if (idx !== -1) {
+      risposta = full.slice(0, idx).trim()
+      const parts = full.slice(idx + 10).split('|').map(s => s.trim()).filter(Boolean)
+      if (parts[0] === 'diagramma' && parts[1]) visual = { tipo: 'diagramma', descrizione: parts[1], didascalia: parts[2] || '' }
+      else if (parts[0] === 'immagine_web' && parts[1]) visual = { tipo: 'immagine_web', query: parts[1], categoria: (parts[2] || '').toLowerCase(), didascalia: parts[3] || '' }
+    }
+    res.status(200).json({ risposta, visual })
   } catch (e) {
     res.status(500).json({ error: 'Chat fallita', dettaglio: String(e).slice(0, 300) })
   }

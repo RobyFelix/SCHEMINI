@@ -20,11 +20,13 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Metodo non consentito' }); return }
   if (!checkPin(req, res)) return
 
-  const { argomento, materia } = readBody(req)
+  const { argomento, materia, contesto, evita } = readBody(req)
   if (!argomento || !argomento.trim()) { res.status(400).json({ error: 'Argomento mancante' }); return }
 
   try {
-    const user = `Argomento: ${argomento.trim()}${materia ? ` (Materia: ${materia})` : ''}.`
+    let user = `Argomento: ${argomento.trim()}${materia ? ` (Materia: ${materia})` : ''}.`
+    if (contesto && String(contesto).trim()) user += `\nLa richiesta nasce da questa conversazione, illustra QUESTO punto: ${String(contesto).slice(0, 1200)}`
+    if (Array.isArray(evita) && evita.filter(Boolean).length) user += `\nNON riproporre queste immagini, già mostrate: ${evita.filter(Boolean).map(s => String(s).slice(0, 80)).join(' ; ')}. Scegline una DIVERSA e complementare.`
     const txt = await callClaudeText(SYS, user, { model: process.env.ANTHROPIC_SCHEMA_MODEL || undefined, max_tokens: 4000 })
 
     const a = txt.search(/<svg[\s>]/i)

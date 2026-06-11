@@ -218,6 +218,13 @@ button.semplifica:disabled{opacity:.6}
 .chat-input textarea{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px;font-family:inherit;font-size:15px;resize:none}
 .chat-input button{background:var(--blue);color:#fff;border:0;border-radius:10px;padding:0 18px;font-weight:700}
 .chat-input button:disabled{opacity:.5}
+.chat-actions{padding:8px 16px 0;display:flex;justify-content:center}
+.chat-imgbtn{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--line);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:700;font-size:13px}
+.chat-imgbtn:disabled{opacity:.5}
+.chat-imgbtn svg{width:16px;height:16px;color:var(--blue)}
+.chat-fig{align-self:flex-start;max-width:88%}
+.chat-fig .figbook{margin:2px 0}
+.chat-fig-loading{align-self:flex-start;font-size:13px;color:var(--muted);font-style:italic;padding:2px 4px}
 .typing{display:inline-flex;gap:4px}
 .typing i{width:7px;height:7px;border-radius:50%;background:#9aa0a6;animation:blink 1.2s infinite}
 .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
