@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.8'
+const VERSIONE = '1.9'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -141,7 +141,48 @@ async function arricchisci(d, foto) {
   return { ...d, studio: await proc(d.studio), schema: await proc(d.schema) }
 }
 
-// Per le schede da testo: risolve i blocchi "immagine_web" reperendo l'immagine.
+// Controllo rapido di idoneità della foto, in locale (niente server): stima la
+// NITIDEZZA con la varianza del Laplaciano e l'ESPOSIZIONE con la luminosità media.
+// In caso di dubbio considera la foto buona, per non dare falsi allarmi.
+const SOGLIA_NITIDEZZA = 55
+function analizzaFoto(dataUrl) {
+  return new Promise((res) => {
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const max = 640
+        const sc = Math.min(1, max / Math.max(img.width, img.height))
+        const w = Math.max(2, Math.round(img.width * sc)), h = Math.max(2, Math.round(img.height * sc))
+        const c = document.createElement('canvas'); c.width = w; c.height = h
+        const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, w, h)
+        const d = ctx.getImageData(0, 0, w, h).data
+        const g = new Float32Array(w * h)
+        let somma = 0
+        for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+          const v = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
+          g[p] = v; somma += v
+        }
+        const lum = somma / (w * h)
+        let s = 0, s2 = 0, n = 0
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const k = y * w + x
+            const lap = 4 * g[k] - g[k - 1] - g[k + 1] - g[k - w] - g[k + w]
+            s += lap; s2 += lap * lap; n++
+          }
+        }
+        const varianza = n ? (s2 / n - (s / n) * (s / n)) : 999
+        let problema = ''
+        if (lum < 45) problema = 'troppo scura'
+        else if (lum > 238) problema = 'troppo chiara'
+        else if (varianza < SOGLIA_NITIDEZZA) problema = 'poco nitida'
+        res({ nitida: !problema, problema, score: Math.round(varianza) })
+      } catch { res({ nitida: true, problema: '', score: 0 }) }
+    }
+    img.onerror = () => res({ nitida: true, problema: '', score: 0 })
+    img.src = dataUrl
+  })
+}
 // Gli "schema" (SVG) non vanno risolti: si disegnano da soli.
 async function arricchisciTesto(d) {
   const proc = async (blocchi) => {
@@ -233,7 +274,11 @@ export default function App() {
     e.target.value = ''
     setErrore('')
     for (const f of files) {
-      try { const d = await comprimi(f); setFoto(p => p.length < MAX_PAGINE ? [...p, { url: d, orig: d, top: 0, bottom: 1 }] : p) }
+      try {
+        const d = await comprimi(f)
+        const check = await analizzaFoto(d)
+        setFoto(p => p.length < MAX_PAGINE ? [...p, { url: d, orig: d, top: 0, bottom: 1, check }] : p)
+      }
       catch { /* salta foto non valida */ }
     }
   }
@@ -255,7 +300,8 @@ export default function App() {
     const f = foto[i]; if (!f) { chiudiCrop(); return }
     const noCrop = cropTop <= 0.001 && cropBot >= 0.999
     const url = noCrop ? f.orig : await ritagliaVerticale(f.orig, cropTop, cropBot)
-    setFoto(p => p.map((x, j) => j === i ? { ...x, top: noCrop ? 0 : cropTop, bottom: noCrop ? 1 : cropBot, url } : x))
+    const check = await analizzaFoto(url)
+    setFoto(p => p.map((x, j) => j === i ? { ...x, top: noCrop ? 0 : cropTop, bottom: noCrop ? 1 : cropBot, url, check } : x))
     chiudiCrop()
   }
   function cropDown(e, which) {
@@ -448,11 +494,14 @@ export default function App() {
             <div className="foto-hint">Scatta le pagine da studiare, in ordine, con buona luce. Massimo {MAX_PAGINE} pagine.</div>
             <div className="foto-grid">
               {foto.map((f, i) => (
-                <div className="foto-cell" key={i}>
+                <div className={'foto-cell' + (f.check && !f.check.nitida ? ' warn' : '')} key={i}>
                   <img src={f.url} alt={`pagina ${i + 1}`} />
                   <span className="foto-num">{i + 1}</span>
                   <button className="foto-del" onClick={() => rimuoviFoto(i)} aria-label="rimuovi pagina">✕</button>
                   <button className={'foto-crop' + ((f.top > 0.001 || f.bottom < 0.999) ? ' on' : '')} onClick={() => apriCrop(i)} aria-label="ritaglia pagina"><IcoCrop /></button>
+                  {f.check && !f.check.nitida && (
+                    <span className="foto-warn" title={`Foto ${f.check.problema}: conviene riscattarla`}>!</span>
+                  )}
                   <div className="foto-move">
                     <button onClick={() => spostaFoto(i, -1)} disabled={i === 0} aria-label="sposta indietro">‹</button>
                     <button onClick={() => spostaFoto(i, 1)} disabled={i === foto.length - 1} aria-label="sposta avanti">›</button>
@@ -466,6 +515,9 @@ export default function App() {
               )}
             </div>
             <div className="foto-count">{foto.length}/{MAX_PAGINE} pagine</div>
+            {foto.some(f => f.check && !f.check.nitida) && (
+              <div className="foto-warn-msg">Le pagine con «!» sembrano poco nitide: meglio riscattare solo quelle prima di generare.</div>
+            )}
             {foto.length > 0 && !busy && (
               <button className="nuova-richiesta" onClick={nuovaRichiesta}>NUOVA RICHIESTA</button>
             )}
