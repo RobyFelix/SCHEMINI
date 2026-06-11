@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.12'
+const VERSIONE = '1.14'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -217,8 +217,14 @@ async function garantisciSchema(d) {
   if (haFigura) return d
   try {
     const r = await api('/api/illustra', { method: 'POST', body: { argomento: d.argomento, materia: d.materia } })
-    if (r && r.svg) {
-      const fig = { tipo: 'diagramma', svg: r.svg, didascalia: d.argomento }
+    let fig = null
+    if (r && r.kind === 'disegno' && r.svg) {
+      fig = { tipo: 'diagramma', svg: r.svg, didascalia: d.argomento }
+    } else if (r && r.kind === 'web' && r.query) {
+      const w = await api('/api/immagine-web', { method: 'POST', body: { query: r.query, categoria: r.categoria || '' } })
+      if (w && w.dataUrl) fig = { tipo: 'immagine_web', src: w.dataUrl, attribution: w.attribution || '', didascalia: d.argomento }
+    }
+    if (fig) {
       let pos = studio.findIndex(b => b && b.tipo === 'sezione')
       pos = pos === -1 ? 0 : pos + 1
       return { ...d, studio: [...studio.slice(0, pos), fig, ...studio.slice(pos)] }
@@ -281,9 +287,7 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
   const [chatFocus, setChatFocus] = useState(null)
   const [regen, setRegen] = useState(false)
-  const [holdId, setHoldId] = useState(null)
-  const holdTimer = useRef(null)
-  const holdStart = useRef(null)
+  const [confermaElim, setConfermaElim] = useState(null)
   const cropStage = useRef(null)
   const cropDrag = useRef(null)
   const fileRef = useRef(null)
@@ -449,21 +453,11 @@ export default function App() {
     try { await api('/api/elimina', { method: 'POST', body: { id } }); setArchivio(a => a.filter(x => x.id !== id)) }
     catch { setErrore('Eliminazione fallita.') }
   }
-
-  function startHold(e, id) {
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch {}
-    holdStart.current = { x: e.clientX, y: e.clientY }
-    setHoldId(id)
-    clearTimeout(holdTimer.current)
-    holdTimer.current = setTimeout(() => { eliminaDavvero(id); setHoldId(null); holdStart.current = null }, 1300)
+  function confermaElimina() {
+    const c = confermaElim
+    setConfermaElim(null)
+    if (c) eliminaDavvero(c.id)
   }
-  function moveHold(e) {
-    const s = holdStart.current
-    if (!s) return
-    const dx = e.clientX - s.x, dy = e.clientY - s.y
-    if (dx * dx + dy * dy > 196) cancelHold() // oltre ~14px = movimento vero
-  }
-  function cancelHold() { clearTimeout(holdTimer.current); setHoldId(null); holdStart.current = null }
 
   function stampa(quale) {
     const etich = quale === 'schema' ? 'RIEPILOGO' : 'STUDIO'
@@ -609,19 +603,12 @@ export default function App() {
         {archivio.length === 0 && <div className="vuoto">Ancora nessun argomento salvato in archivio</div>}
         <ul>
           {archivio.map(r => (
-            <li key={r.id} className={holdId === r.id ? 'holding' : ''}>
-              <span className="row-fill" />
-              <button className="apri" onClick={() => apri(r.id)} disabled={holdId === r.id}>
+            <li key={r.id}>
+              <button className="apri" onClick={() => apri(r.id)}>
                 <span className="a-arg">{r.argomento}</span>
                 <span className="a-meta">{r.materia ? r.materia + ' · ' : ''}{new Date(r.created_at).toLocaleDateString('it-IT')}</span>
               </button>
-              <button className="del-hold"
-                onPointerDown={(e) => startHold(e, r.id)} onPointerMove={moveHold}
-                onPointerUp={cancelHold} onPointerCancel={cancelHold}
-                title="Tieni premuto per eliminare">
-                <span className="del-x">✕</span>
-                <span className="del-hint">tieni premuto</span>
-              </button>
+              <button className="del-btn" onClick={() => setConfermaElim({ id: r.id, argomento: r.argomento })} aria-label="elimina scheda">✕</button>
             </li>
           ))}
         </ul>
@@ -638,6 +625,19 @@ export default function App() {
               <button className="m-primary" onClick={regenSalvaEGenera}>SALVA e GENERA</button>
               <button onClick={regenSenzaSalvare}>GENERA SENZA SALVARE</button>
               <button className="m-ghost" onClick={regenEsci}>ESCI</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confermaElim && (
+        <div className="modal-overlay" onClick={() => setConfermaElim(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Eliminare questa scheda?</div>
+            <p className="modal-text">«{confermaElim.argomento}» verrà eliminata dall'archivio. L'azione non si può annullare.</p>
+            <div className="modal-actions">
+              <button className="m-danger" onClick={confermaElimina}>ELIMINA</button>
+              <button className="m-ghost" onClick={() => setConfermaElim(null)}>ANNULLA</button>
             </div>
           </div>
         </div>

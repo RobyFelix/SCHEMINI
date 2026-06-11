@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     const pages = (data.query && data.query.pages) ? Object.values(data.query.pages) : []
     pages.sort((a, b) => (a.index ?? 99) - (b.index ?? 99))
 
-    const okMime = m => m === 'image/jpeg' || m === 'image/png'
+    const okMime = m => m === 'image/jpeg' || m === 'image/png' || m === 'image/svg+xml'
     const candidati = pages
       .map(p => p.imageinfo && p.imageinfo[0])
       .filter(ii => ii && ii.thumburl && okMime(ii.mime) && !(ii.width && ii.height && Math.max(ii.width, ii.height) < 300))
@@ -49,7 +49,9 @@ export default async function handler(req, res) {
     }
     if (!scelto) { res.status(404).json({ error: 'Nessuna immagine trovata' }); return }
 
-    const mime = scelto.thumbmime || scelto.mime || 'image/jpeg'
+    // l'anteprima è sempre PNG o JPEG (anche per i file SVG): rilevo il tipo dai byte
+    const mime = (buf[0] === 0x89 && buf[1] === 0x50) ? 'image/png'
+      : (buf[0] === 0xFF && buf[1] === 0xD8) ? 'image/jpeg' : 'image/png'
     const dataUrl = `data:${mime};base64,${buf.toString('base64')}`
 
     const meta = scelto.extmetadata || {}

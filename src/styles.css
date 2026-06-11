@@ -185,14 +185,9 @@ button.semplifica:disabled{opacity:.6}
 .chiedi{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--blue);background:#fff;color:var(--blue);font-weight:700;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;opacity:.55;cursor:pointer}
 .chiedi:hover{opacity:1}
 
-/* long-press delete */
-.archivio li{position:relative;overflow:hidden;border-radius:10px}
-.archivio li .apri,.archivio li .del-hold{position:relative;z-index:1}
-.row-fill{position:absolute;inset:0;width:0;background:rgba(207,58,48,.18);z-index:0;pointer-events:none}
-.archivio li.holding .row-fill{width:100%;transition:width 1.3s linear}
-.del-hold{width:64px;border:1px solid var(--line);background:#fff;border-radius:10px;color:var(--red);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;touch-action:none;user-select:none}
-.del-hold .del-x{font-size:15px}
-.del-hold .del-hint{font-size:8px;color:var(--muted);line-height:1;text-align:center}
+/* delete button (tap -> conferma) */
+.del-btn{width:48px;border:1px solid var(--line);background:#fff;border-radius:10px;color:var(--red);font-size:16px;display:flex;align-items:center;justify-content:center}
+.del-btn:active{background:#fdecec}
 
 /* modal rigenera */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:18px;z-index:50}
@@ -202,6 +197,7 @@ button.semplifica:disabled{opacity:.6}
 .modal-actions{display:flex;flex-direction:column;gap:8px}
 .modal-actions button{padding:12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:15px}
 .modal-actions .m-primary{background:var(--green);color:#fff;border-color:var(--green)}
+.modal-actions .m-danger{background:var(--red);color:#fff;border-color:var(--red)}
 .modal-actions .m-ghost{color:var(--muted)}
 
 /* chat */

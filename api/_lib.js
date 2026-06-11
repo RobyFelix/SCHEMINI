@@ -144,11 +144,14 @@ Due tipi di blocco:
    REGOLA FERREA: per un argomento tecnico o visualizzabile la scheda "studio" DEVE contenere almeno un blocco "diagramma". E non descrivere MAI una figura dentro un blocco di testo: se una cosa va illustrata, usa un blocco "diagramma" con la sua descrizione, mai parole al posto del disegno.
 
 2) {"tipo":"immagine_web","query":"...","categoria":"monumento|cartina|foto|opera","didascalia":"..."}
-   Per cose REALI da reperire (NON disegnabili a mano): monumenti (es. Piramide di Giza), luoghi, cartine geografiche, opere d'arte, foto storiche, oggetti reali. Tu fornisci solo COSA cercare.
-   - "query": termini di ricerca precisi, col nome proprio (es. "Pyramid of Giza", "Colosseo Roma", "Italia carta fisica").
-   - Usa questo tipo solo quando serve un'immagine reale e un disegno non andrebbe bene.
+   Per cose REALI da reperire (NON disegnabili a mano): cartine geografiche, regioni, Stati, luoghi, monumenti (es. Piramide di Giza), opere d'arte, foto storiche, persone storiche, oggetti reali. Tu fornisci solo COSA cercare.
+   - "query": termini di ricerca precisi col nome proprio. Per le CARTINE usa l'INGLESE con la parola "map" (es. "Lazio map", "Roman Gaul map", "Italy physical map"); l'italiano per le mappe è inaffidabile.
+   - REGOLA FONDAMENTALE: una CARTINA o MAPPA geografica va SEMPRE reperita con "immagine_web", MAI disegnata. Lo stesso per luoghi, regioni, monumenti, persone reali.
 
-Regola di scelta: diagramma, relazione, processo o figura geometrica -> usa "diagramma" (lo disegni tu); cosa reale del mondo -> usa "immagine_web". Punta ad avere sempre almeno una visuale utile quando l'argomento è tecnico o visualizzabile.`
+Regola di scelta del medium:
+- "diagramma" (lo disegni tu) SOLO per schemi ASTRATTI: fisica, geometria, processi, cicli, relazioni, strutture, diagrammi di flusso. MAI per la geografia.
+- "immagine_web" (reperito) per tutto ciò che è REALE: cartine/mappe, luoghi, regioni, monumenti, persone storiche, opere. In dubbio tra disegnare una mappa e cercarla: CERCALA.
+Punta ad avere sempre almeno una visuale utile quando l'argomento è visualizzabile.`
 
 export const DISEGNO_REGOLE = `REGOLE DEL DISEGNO:
 - Rispondi SOLO con il codice SVG, niente testo prima o dopo, niente backtick.
