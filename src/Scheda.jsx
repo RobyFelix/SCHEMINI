@@ -3,7 +3,23 @@ import { Inline, Display } from './katexUtil.jsx'
 import Plot from './Plot.jsx'
 
 const PROSE = new Set(['testo', 'elenco'])
-const BOX = new Set(['callout', 'formula', 'esempio', 'casi', 'grafico', 'tabella', 'timeline', 'immagine'])
+const BOX = new Set(['callout', 'formula', 'esempio', 'casi', 'grafico', 'tabella', 'timeline', 'immagine', 'schema', 'immagine_web'])
+
+// Ripulisce l'SVG generato dal modello prima di mostrarlo (difesa minima):
+// via script, gestori di eventi, foreignObject, riferimenti esterni e javascript:.
+function pulisciSvg(svg) {
+  if (typeof svg !== 'string') return ''
+  let s = svg.trim()
+  if (!/^<svg[\s>]/i.test(s)) return ''
+  s = s.replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/(?:xlink:href|href)\s*=\s*"(?!#)[^"]*"/gi, '')
+    .replace(/(?:xlink:href|href)\s*=\s*'(?!#)[^']*'/gi, '')
+    .replace(/javascript:/gi, '')
+  return s
+}
 
 function bloccoTesto(b) {
   switch (b.tipo) {
@@ -17,6 +33,8 @@ function bloccoTesto(b) {
     case 'tabella': return `${(b.intestazioni || []).join(' | ')} :: ${(b.righe || []).map(r => r.join(' / ')).join(' ; ')}`
     case 'timeline': return (b.eventi || []).map(e => `${e.data}: ${e.label}`).join('; ')
     case 'immagine': return `figura del libro: ${b.didascalia || ''}`
+    case 'schema': return `schema: ${b.didascalia || ''}`
+    case 'immagine_web': return `immagine: ${b.didascalia || ''}`
     default: return ''
   }
 }
@@ -115,6 +133,23 @@ function Contenuto({ b }) {
         <figure className="figbook">
           <img src={b.src} alt={b.didascalia || 'figura del libro'} />
           {b.didascalia && <figcaption>{b.didascalia}</figcaption>}
+        </figure>
+      ) : null
+    case 'schema': {
+      const svg = pulisciSvg(b.svg)
+      return svg ? (
+        <figure className="figbook figsvg">
+          <div className="svg-wrap" dangerouslySetInnerHTML={{ __html: svg }} />
+          {b.didascalia && <figcaption>{b.didascalia}</figcaption>}
+        </figure>
+      ) : null
+    }
+    case 'immagine_web':
+      return b.src ? (
+        <figure className="figbook figweb">
+          <img src={b.src} alt={b.didascalia || 'immagine'} />
+          {b.didascalia && <figcaption>{b.didascalia}</figcaption>}
+          {b.attribution && <div className="fig-credit">{b.attribution}</div>}
         </figure>
       ) : null
     default:

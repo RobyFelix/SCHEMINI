@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.5'
+const VERSIONE = '1.6'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -141,6 +141,26 @@ async function arricchisci(d, foto) {
   return { ...d, studio: await proc(d.studio), schema: await proc(d.schema) }
 }
 
+// Per le schede da testo: risolve i blocchi "immagine_web" reperendo l'immagine.
+// Gli "schema" (SVG) non vanno risolti: si disegnano da soli.
+async function arricchisciTesto(d) {
+  const proc = async (blocchi) => {
+    if (!Array.isArray(blocchi)) return blocchi
+    const out = []
+    for (const b of blocchi) {
+      if (b && b.tipo === 'immagine_web' && b.query) {
+        try {
+          const r = await api('/api/immagine-web', { method: 'POST', body: { query: b.query, categoria: b.categoria || '' } })
+          if (r && r.dataUrl) out.push({ ...b, src: r.dataUrl, attribution: r.attribution || '' })
+          // se non trovata, scarto il blocco: niente figura rotta
+        } catch { /* scarto in silenzio */ }
+      } else out.push(b)
+    }
+    return out
+  }
+  return { ...d, studio: await proc(d.studio), schema: await proc(d.schema) }
+}
+
 function LoadingCard({ kind }) {
   const msgs = MESSAGGI[kind] || MESSAGGI.genera
   const [i, setI] = useState(0)
@@ -259,7 +279,8 @@ export default function App() {
     setBusy('genera'); setErrore(''); setScheda(null); setSalvato(false)
     try {
       const d = await api('/api/genera', { method: 'POST', body: { argomento } })
-      setScheda(normalizza(d)); setTab('studio')
+      const dd = await arricchisciTesto(d)
+      setScheda(normalizza(dd)); setTab('studio')
     } catch (e) {
       setErrore(e.code === 401 ? 'PIN scaduto, rientra.' : 'Generazione fallita. Riprova.')
       if (e.code === 401) setAuthed(false)

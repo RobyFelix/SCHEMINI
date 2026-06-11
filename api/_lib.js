@@ -113,3 +113,23 @@ FORMATO: rispondi SOLO con un oggetto JSON valido, senza testo prima o dopo, sen
 {"argomento":"titolo breve e specifico","materia":"Matematica|Fisica|Storia|...","studio":[...blocchi...],"schema":[...blocchi...]}
 
 ${BLOCK_TYPES}`
+
+export const ADDENDUM_VISIVO = `
+
+VISUALI (immagini nelle schede):
+Puoi arricchire le schede con AL MASSIMO 3 visuali in tutto, SOLO dove un'immagine aiuta davvero a capire (mai per decorazione). Metti ogni visuale vicino al punto che spiega. Due tipi di blocco:
+
+1) {"tipo":"schema","svg":"<svg ...>...</svg>","didascalia":"..."}
+   Per DISEGNI e SCHEMI che puoi tracciare tu: figure geometriche, vasi comunicanti, circuiti, piano inclinato, vettori e forze, diagrammi di flusso, cicli, strutture, relazioni. Disegni l'immagine direttamente in SVG.
+   Regole per l'SVG:
+   - Deve iniziare con <svg> e contenere un viewBox (es. viewBox='0 0 480 320'). Usa apici SINGOLI per gli attributi, così sta nel JSON senza problemi.
+   - Disegno PULITO e CORRETTO: linee nere/grigio scuro (#1f2d3d), un tocco di blu (#2f74b5) per evidenziare, sfondo trasparente. Etichette in italiano, leggibili (font-size circa 16).
+   - VIETATO: <script>, gestori di eventi (onclick ecc.), <foreignObject>, immagini o riferimenti esterni. Solo forme, linee e testo.
+   - Tienilo semplice: meglio uno schema chiaro che uno complicato.
+
+2) {"tipo":"immagine_web","query":"...","categoria":"monumento|cartina|foto|opera","didascalia":"..."}
+   Per cose REALI da reperire (NON disegnabili a mano): monumenti (es. Piramide di Giza), luoghi, cartine geografiche, opere d'arte, foto storiche, oggetti reali. Tu fornisci solo COSA cercare.
+   - "query": termini di ricerca precisi, col nome proprio (es. "Pyramid of Giza", "Colosseo Roma", "Italia carta fisica").
+   - Usa questo tipo solo quando serve un'immagine reale e un disegno non andrebbe bene.
+
+Regola di scelta: diagramma, relazione, processo o figura geometrica -> usa "schema" (lo disegni tu); cosa reale del mondo -> usa "immagine_web". Non esagerare con le visuali.`
