@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.7'
+const VERSIONE = '1.8'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -12,7 +12,7 @@ function normalizza(s) {
 }
 
 const MESSAGGI = {
-  genera: ["Guardo che m'hai chiesto...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo i disegnetti...", "...c'a posso fa!"],
+  genera: ["Guardo che voj...", 'Scelgo la roba importante...', 'Sbrodolo gli schemi....', "C'aggiungo i disegnetti...", "...c'a posso fa!"],
   semplifica: ['Famo tutto più semplice...', 'Meno sbrodolate...', 'Gnente parole rognose...', '...eccome...']
 }
 
@@ -385,8 +385,16 @@ export default function App() {
   function cancelHold() { clearTimeout(holdTimer.current); setHoldId(null); holdStart.current = null }
 
   function stampa(quale) {
+    const etich = quale === 'schema' ? 'RIEPILOGO' : 'STUDIO'
+    const nome = ((scheda && scheda.argomento) ? scheda.argomento : 'SCHEMINI') + ' - ' + etich
+    const titoloPrec = document.title
+    document.title = nome
     document.body.classList.add(`print-${quale}`)
-    const cleanup = () => { document.body.classList.remove('print-studio', 'print-schema'); window.removeEventListener('afterprint', cleanup) }
+    const cleanup = () => {
+      document.body.classList.remove('print-studio', 'print-schema')
+      document.title = titoloPrec
+      window.removeEventListener('afterprint', cleanup)
+    }
     window.addEventListener('afterprint', cleanup)
     setTimeout(() => window.print(), 60)
   }

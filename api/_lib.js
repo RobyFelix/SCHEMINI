@@ -117,7 +117,9 @@ ${BLOCK_TYPES}`
 export const ADDENDUM_VISIVO = `
 
 VISUALI (immagini nelle schede):
-Puoi arricchire le schede con AL MASSIMO 3 visuali in tutto, SOLO dove un'immagine aiuta davvero a capire (mai per decorazione). Metti ogni visuale vicino al punto che spiega. Due tipi di blocco:
+Lo studente ha un DSA e capisce MOLTO meglio con disegni e schemi che con il solo testo: una scheda tecnica tutta testo è un mezzo fallimento. Quindi CERCA SEMPRE di illustrare i concetti, soprattutto quelli tecnici o visualizzabili.
+Regola pratica: per Fisica, Matematica, Scienze, Geografia — e per qualunque cosa abbia una forma, un meccanismo, un processo, una struttura o una relazione spaziale — inserisci ALMENO una visuale (di norma uno "schema" disegnato), vicino al punto chiave, soprattutto nella scheda "studio". Esempi di schemi attesi: vasi comunicanti (i due recipienti collegati col livello del liquido), piano inclinato con le forze, un circuito, la parabola col vertice, il ciclo dell'acqua. Usa fino a 3 visuali dove aiutano. Evita immagini solo quando il tema è puramente astratto/verbale e un disegno non aggiungerebbe nulla.
+Due tipi di blocco:
 
 1) {"tipo":"schema","svg":"<svg ...>...</svg>","didascalia":"..."}
    Per DISEGNI e SCHEMI che puoi tracciare tu: figure geometriche, vasi comunicanti, circuiti, piano inclinato, vettori e forze, diagrammi di flusso, cicli, strutture, relazioni. Disegni l'immagine direttamente in SVG.
@@ -132,4 +134,4 @@ Puoi arricchire le schede con AL MASSIMO 3 visuali in tutto, SOLO dove un'immagi
    - "query": termini di ricerca precisi, col nome proprio (es. "Pyramid of Giza", "Colosseo Roma", "Italia carta fisica").
    - Usa questo tipo solo quando serve un'immagine reale e un disegno non andrebbe bene.
 
-Regola di scelta: diagramma, relazione, processo o figura geometrica -> usa "schema" (lo disegni tu); cosa reale del mondo -> usa "immagine_web". Non esagerare con le visuali.`
+Regola di scelta: diagramma, relazione, processo o figura geometrica -> usa "schema" (lo disegni tu); cosa reale del mondo -> usa "immagine_web". Punta ad avere sempre almeno una visuale utile quando l'argomento è tecnico o visualizzabile.`
