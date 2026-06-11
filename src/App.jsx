@@ -3,7 +3,7 @@ import Scheda from './Scheda.jsx'
 import Chat from './Chat.jsx'
 import { api, getPin, setPin, clearPin } from './api.js'
 
-const VERSIONE = '1.6'
+const VERSIONE = '1.7'
 const MAX_PAGINE = 5
 
 function normalizza(s) {
@@ -413,6 +413,7 @@ export default function App() {
     <div className="app">
       <header className="topbar no-print">
         <div className="brand">
+          <img className="brand-ico" src="/favicon.svg" alt="" />
           <div className="logo">SCHEMINI</div>
           <div className="ver">v{VERSIONE}</div>
         </div>

@@ -176,6 +176,7 @@ button.semplifica:disabled{opacity:.6}
 /* header */
 .topbar{justify-content:space-between}
 .brand{display:flex;align-items:baseline;gap:8px}
+.brand-ico{width:28px;height:28px;border-radius:7px;align-self:center;display:block;border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .brand .ver{color:var(--muted);font-size:13px;font-weight:700}
 .ask-btn{background:var(--blue);color:#fff;border:0;border-radius:20px;padding:9px 16px;font-weight:700;font-size:13px;letter-spacing:.03em}
 
